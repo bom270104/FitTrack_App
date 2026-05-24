@@ -6,6 +6,9 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import waterRoutes from "./routes/water.routes.js";
 import healthRoutes from "./routes/health.routes.js";
+import bmiRoutes from "./routes/bmi.routes.js";
+import caloriesRoutes from "./routes/calories.routes.js";
+import statsRoutes from "./routes/stats.routes.js";
 import { notFound, errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
@@ -36,6 +39,9 @@ app.get("/api/status", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/bmi", bmiRoutes);
+app.use("/api/calories", caloriesRoutes);
+app.use("/api/stats", statsRoutes);
 app.use("/api/water", waterRoutes);
 app.use("/api/health", healthRoutes);
 

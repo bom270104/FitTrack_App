@@ -1,5 +1,5 @@
-import HealthLog from "../models/HealthLog.js";
 import { calculateBMI, calculateTDEE } from "../utils/calculations.js";
+import HealthLog from "../models/HealthLog.js";
 
 export const calculateHealthMetrics = async (userId, payload) => {
   const bmiResult = calculateBMI(payload.weight, payload.height);
