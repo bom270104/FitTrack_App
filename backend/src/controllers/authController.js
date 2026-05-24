@@ -1,0 +1,41 @@
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { sendSuccess } from "../utils/apiResponse.js";
+import {
+  getAuthenticatedUser,
+  loginUser,
+  registerUser,
+} from "../services/authService.js";
+import {
+  validateLoginInput,
+  validateRegisterInput,
+} from "../validations/auth.validation.js";
+
+export const register = asyncHandler(async (req, res) => {
+  const payload = validateRegisterInput(req.body);
+  const { user, token } = await registerUser(payload);
+
+  return sendSuccess(res, {
+    statusCode: 201,
+    message: "User registered successfully",
+    data: { user, token },
+  });
+});
+
+export const login = asyncHandler(async (req, res) => {
+  const payload = validateLoginInput(req.body);
+  const { user, token } = await loginUser(payload);
+
+  return sendSuccess(res, {
+    message: "Login successful",
+    data: { user, token },
+  });
+});
+
+export const me = asyncHandler(async (req, res) => {
+  const user = await getAuthenticatedUser(req.user._id);
+
+  return sendSuccess(res, {
+    message: "Authenticated user retrieved successfully",
+    data: { user },
+  });
+});
