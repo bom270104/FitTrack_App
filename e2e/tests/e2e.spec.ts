@@ -36,22 +36,15 @@ test('register -> login -> add water -> verify UI', async ({ page, request }) =>
     await page.evaluate((t) => localStorage.setItem('ft_token', t), token);
     await page.reload();
 
-    // 4) Go to Water screen using bottom nav
-    await page.getByRole('button', { name: /Water/i }).click();
-    await expect(page.getByText("Today's Log")).toBeVisible();
+    // 4) Wait for dashboard to load, then open Water screen via dashboard card
+    await expect(page.getByText('Your BMI')).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Water/i }).nth(0).click();
+    await expect(page.getByText("Today's Log")).toBeVisible({ timeout: 15000 });
 
-    // 5) Add quick amount via API (to avoid flakiness) and then reload UI
-    const addRes = await request.post('http://localhost:5000/api/water', {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { amount: 250 },
-    });
-    expect(addRes.ok()).toBeTruthy();
-
-    // reload and assert the new entry appears in Today's Log
-    await page.reload();
-    await page.getByRole('heading', { name: /Today's Log/i }).scrollIntoViewIfNeeded();
-    // look for an entry with '+250ml' or timestamp
-    await expect(page.locator('text=+250ml').first()).toBeVisible({ timeout: 5000 });
+    // 5) Use Quick Add UI to add 250ml so client updates state
+    await page.getByRole('button', { name: /250ml/i }).click();
+    // assert the new entry appears in Today's Log
+    await expect(page.locator('text=+250ml').first()).toBeVisible({ timeout: 10000 });
 
     // take screenshot artifact
     await page.screenshot({ path: 'e2e/artifact-water-log.png', fullPage: false });
