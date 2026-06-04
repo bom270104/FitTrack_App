@@ -9,6 +9,7 @@ export type ScreenName =
     | "register"
     | "dashboard"
     | "bmi"
+    | "calories"
     | "water"
     | "statistics"
     | "profile"
@@ -23,6 +24,10 @@ type UserData = {
     age: number;
     height: number;
     weight: number;
+    gender: string;
+    activityLevel: string;
+    goal: string;
+    dailyWaterGoal: number;
 };
 
 type HealthData = {
@@ -47,8 +52,10 @@ type AppContextValue = {
     register: (payload: any) => Promise<boolean>;
     logout: () => void;
     postBmi: (payload: { height: number; weight: number; bmi: number }) => Promise<boolean>;
+    updateProfile: (payload: Partial<UserData>) => Promise<boolean>;
     updateWeight: (weight: number) => void;
     addWater: (amount: number) => Promise<void>;
+    refreshHealth: () => Promise<void>;
     loading: boolean;
 };
 
@@ -62,6 +69,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         age: 21,
         height: 175,
         weight: 72,
+        gender: "male",
+        activityLevel: "moderate",
+        goal: "maintain",
+        dailyWaterGoal: 2000,
     });
     const [token, setToken] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -207,7 +218,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                     // hist.data.logs expected shape from API: { logs: [...], totalAmount }
                     const mappedHistory = hist && hist.data && Array.isArray(hist.data.logs)
                         ? hist.data.logs.map((l: any) => ({ date: l.date || l.createdAt || "", amount: l.amount || l.value || 0 }))
-                        : [...current.waterHistory.slice(-6), { date: "Now", amount }];
+                        : [...healthData.waterHistory.slice(-6), { date: "Now", amount }];
 
                     setHealthData((current) => ({
                         ...current,
@@ -218,6 +229,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                     // eslint-disable-next-line no-console
                     console.error(err);
                 }
+            },
+            refreshHealth: async () => {
+                await fetchHealth();
             },
             logout: () => {
                 localStorage.removeItem("ft_token");
@@ -237,6 +251,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
                     // refresh health/stats
                     await fetchHealth();
+                    return true;
+                } catch (err) {
+                    // eslint-disable-next-line no-console
+                    console.error(err);
+                    return false;
+                }
+            },
+            updateProfile: async (payload: Partial<UserData>) => {
+                try {
+                    const res = await fetchWithAuth("/api/users/profile", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            fullName: payload.name,
+                            age: payload.age,
+                            gender: payload.gender,
+                            height: payload.height,
+                            weight: payload.weight,
+                            activityLevel: payload.activityLevel,
+                            goal: payload.goal,
+                            dailyWaterGoal: payload.dailyWaterGoal,
+                        }),
+                    });
+
+                    if (!res || !res.ok) return false;
+
+                    const body = await res.json();
+                    const updated = body?.data?.user || body?.data || {};
+
+                    setUserData((current) => ({
+                        name: updated.fullName || updated.name || current?.name || "",
+                        email: updated.email || current?.email || "",
+                        age: updated.age ?? current?.age ?? 18,
+                        height: updated.height ?? current?.height ?? 170,
+                        weight: updated.weight ?? current?.weight ?? 70,
+                        gender: updated.gender ?? current?.gender ?? "male",
+                        activityLevel: updated.activityLevel ?? current?.activityLevel ?? "moderate",
+                        goal: updated.goal ?? current?.goal ?? "maintain",
+                        dailyWaterGoal: updated.dailyWaterGoal ?? current?.dailyWaterGoal ?? 2000,
+                    }));
+
+                    if (typeof updated.height === "number" && typeof updated.weight === "number") {
+                        const nextBmi = Number((updated.weight / Math.pow(updated.height / 100, 2)).toFixed(1));
+                        setHealthData((current) => ({
+                            ...current,
+                            currentWeight: updated.weight,
+                            bmi: nextBmi,
+                        }));
+                    }
+
+                    await fetchHealth();
+
                     return true;
                 } catch (err) {
                     // eslint-disable-next-line no-console
@@ -281,6 +347,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                     age: body.data.age || 18,
                     height: body.data.height || 170,
                     weight: body.data.weight || 70,
+                    gender: body.data.gender || "male",
+                    activityLevel: body.data.activityLevel || "moderate",
+                    goal: body.data.goal || "maintain",
+                    dailyWaterGoal: body.data.dailyWaterGoal || 2000,
                 });
             }
         } catch (err) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useApp } from "../app-context";
 import { BottomNav } from "../bottom-nav";
 import { ArrowLeft, TrendingDown, Droplets, Flame, Scale } from "lucide-react";
@@ -7,13 +8,37 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, Cart
 
 export function StatisticsScreen() {
     const { healthData, setScreen } = useApp();
+    const [range, setRange] = useState<"Week" | "Month" | "Year">("Week");
 
-    const stats = [
-        { label: "Avg. Weight", value: "72.3", unit: "kg", change: "-0.8kg", positive: true, icon: Scale, color: "bg-primary/10 text-primary" },
-        { label: "Avg. Water", value: "2,100", unit: "ml", change: "+200ml", positive: true, icon: Droplets, color: "bg-secondary/10 text-secondary" },
-        { label: "Avg. Calories", value: "1,920", unit: "kcal", change: "-80kcal", positive: true, icon: Flame, color: "bg-accent/10 text-accent" },
-        { label: "BMI Change", value: "-0.3", unit: "kg/m2", change: "This week", positive: true, icon: TrendingDown, color: "bg-chart-5/10 text-chart-5" },
-    ];
+    const derivedStats = useMemo(() => {
+        const weights = healthData.weightHistory || [];
+        const waters = healthData.waterHistory || [];
+
+        const avgWeight = weights.length ? weights.reduce((sum, item) => sum + Number(item.weight || 0), 0) / weights.length : healthData.currentWeight;
+        const avgWater = waters.length ? waters.reduce((sum, item) => sum + Number(item.amount || 0), 0) / waters.length : healthData.waterIntake;
+        const bmiChange = weights.length > 1 ? Number((weights[weights.length - 1].weight - weights[0].weight).toFixed(1)) : 0;
+
+        return [
+            { label: "Avg. Weight", value: avgWeight.toFixed(1), unit: "kg", change: `${bmiChange <= 0 ? "" : "+"}${bmiChange.toFixed(1)}kg`, positive: bmiChange <= 0, icon: Scale, color: "bg-primary/10 text-primary" },
+            { label: "Avg. Water", value: Math.round(avgWater).toLocaleString(), unit: "ml", change: healthData.waterIntake >= healthData.waterGoal ? "On track" : "Below goal", positive: healthData.waterIntake >= healthData.waterGoal, icon: Droplets, color: "bg-secondary/10 text-secondary" },
+            { label: "Avg. Calories", value: Math.round(healthData.dailyCalories).toLocaleString(), unit: "kcal", change: `${healthData.calorieGoal - healthData.dailyCalories >= 0 ? "-" : "+"}${Math.abs(healthData.calorieGoal - healthData.dailyCalories)}`, positive: healthData.dailyCalories <= healthData.calorieGoal, icon: Flame, color: "bg-accent/10 text-accent" },
+            { label: "BMI Change", value: Number(healthData.bmi).toFixed(1), unit: "kg/m2", change: "Current BMI", positive: true, icon: TrendingDown, color: "bg-chart-5/10 text-chart-5" },
+        ];
+    }, [healthData]);
+
+    const chartWeightData = useMemo(() => {
+        const items = healthData.weightHistory || [];
+        if (range === "Week") return items.slice(-7);
+        if (range === "Month") return items.slice(-30);
+        return items;
+    }, [healthData.weightHistory, range]);
+
+    const chartWaterData = useMemo(() => {
+        const items = healthData.waterHistory || [];
+        if (range === "Week") return items.slice(-7);
+        if (range === "Month") return items.slice(-30);
+        return items;
+    }, [healthData.waterHistory, range]);
 
     return (
         <div className="flex h-full flex-col bg-background">
@@ -28,9 +53,9 @@ export function StatisticsScreen() {
 
             <div className="flex-1 overflow-y-auto px-5 pb-28">
                 <div className="mb-6 flex gap-2">
-                    {["Week", "Month", "Year"].map((range, index) => (
-                        <button key={range} className={`flex-1 rounded-xl py-2 text-sm font-medium transition-all ${index === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                            {range}
+                    {(["Week", "Month", "Year"] as const).map((item) => (
+                        <button key={item} onClick={() => setRange(item)} className={`flex-1 rounded-xl py-2 text-sm font-medium transition-all ${range === item ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                            {item}
                         </button>
                     ))}
                 </div>
@@ -39,7 +64,7 @@ export function StatisticsScreen() {
                     <h3 className="mb-4 text-sm font-semibold text-foreground">Weight Progress</h3>
                     <div className="h-40">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={healthData.weightHistory}>
+                            <LineChart data={chartWeightData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                                 <YAxis domain={[70, 74]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={30} />
@@ -53,7 +78,7 @@ export function StatisticsScreen() {
                     <h3 className="mb-4 text-sm font-semibold text-foreground">Water Intake</h3>
                     <div className="h-40">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={healthData.waterHistory}>
+                            <BarChart data={chartWaterData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={35} />
@@ -64,7 +89,7 @@ export function StatisticsScreen() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                    {stats.map((stat) => (
+                    {derivedStats.map((stat) => (
                         <div key={stat.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                             <div className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${stat.color}`}>
                                 <stat.icon className="h-4 w-4" />

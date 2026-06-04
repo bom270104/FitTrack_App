@@ -17,6 +17,11 @@ const env = {
   jwtSecret: process.env.JWT_SECRET || "fittrack-development-secret",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   corsOrigin: process.env.CORS_ORIGIN || "",
+  smtpHost: process.env.SMTP_HOST || "",
+  smtpPort: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined,
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPass: process.env.SMTP_PASS || "",
+  smtpFrom: process.env.SMTP_FROM || "FitTrack <no-reply@fittrack.app>",
 };
 
 export const requireEnv = (value, name) => {

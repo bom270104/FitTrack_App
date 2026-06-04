@@ -21,7 +21,7 @@ interface Goal {
 
 export function GoalsScreen() {
     const { healthData, setScreen } = useApp();
-    const [goals] = useState<Goal[]>([
+    const [goals, setGoals] = useState<Goal[]>([
         {
             id: "1",
             title: "Target Weight",
@@ -58,6 +58,27 @@ export function GoalsScreen() {
     ]);
 
     const [showAddGoal, setShowAddGoal] = useState(false);
+    const [newGoal, setNewGoal] = useState({ title: "", target: "", unit: "kg" });
+
+    const addGoal = () => {
+        if (!newGoal.title.trim() || !newGoal.target.trim()) return;
+
+        const nextGoal: Goal = {
+            id: String(Date.now()),
+            title: newGoal.title.trim(),
+            target: newGoal.target.trim(),
+            current: 0,
+            max: 1,
+            unit: newGoal.unit,
+            icon: Target,
+            color: "bg-primary text-primary",
+            completed: false,
+        };
+
+        setGoals((current) => [nextGoal, ...current]);
+        setNewGoal({ title: "", target: "", unit: "kg" });
+        setShowAddGoal(false);
+    };
 
     return (
         <div className="flex h-full flex-col bg-background">
@@ -97,11 +118,22 @@ export function GoalsScreen() {
                     <div className="mb-4 animate-in slide-in-from-top-2 rounded-2xl border border-border bg-card p-5 shadow-sm">
                         <h3 className="mb-4 text-sm font-semibold text-foreground">Add New Goal</h3>
                         <div className="space-y-3">
-                            <Input placeholder="Goal title" className="h-12 rounded-xl border-0 bg-muted" />
-                            <Input placeholder="Target value" className="h-12 rounded-xl border-0 bg-muted" />
+                            <Input value={newGoal.title} onChange={(e) => setNewGoal((current) => ({ ...current, title: e.target.value }))} placeholder="Goal title" className="h-12 rounded-xl border-0 bg-muted" />
+                            <Input value={newGoal.target} onChange={(e) => setNewGoal((current) => ({ ...current, target: e.target.value }))} placeholder="Target value" className="h-12 rounded-xl border-0 bg-muted" />
+                            <div className="flex gap-2">
+                                <Button type="button" variant={newGoal.unit === "kg" ? "default" : "outline"} onClick={() => setNewGoal((current) => ({ ...current, unit: "kg" }))} className="h-10 flex-1 rounded-xl">
+                                    kg
+                                </Button>
+                                <Button type="button" variant={newGoal.unit === "ml" ? "default" : "outline"} onClick={() => setNewGoal((current) => ({ ...current, unit: "ml" }))} className="h-10 flex-1 rounded-xl">
+                                    ml
+                                </Button>
+                                <Button type="button" variant={newGoal.unit === "kcal" ? "default" : "outline"} onClick={() => setNewGoal((current) => ({ ...current, unit: "kcal" }))} className="h-10 flex-1 rounded-xl">
+                                    kcal
+                                </Button>
+                            </div>
                             <div className="flex gap-3">
                                 <Button variant="outline" onClick={() => setShowAddGoal(false)} className="h-12 flex-1 rounded-xl">Cancel</Button>
-                                <Button onClick={() => setShowAddGoal(false)} className="h-12 flex-1 rounded-xl bg-primary text-primary-foreground">Add Goal</Button>
+                                <Button onClick={addGoal} className="h-12 flex-1 rounded-xl bg-primary text-primary-foreground">Add Goal</Button>
                             </div>
                         </div>
                     </div>

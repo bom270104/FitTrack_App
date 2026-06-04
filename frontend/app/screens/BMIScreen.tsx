@@ -23,8 +23,8 @@ function getBMICategory(bmi: number) {
 
 export function BMIScreen() {
     const { userData, healthData, setScreen, updateWeight, postBmi } = useApp();
-    const [height, setHeight] = useState(userData.height.toString());
-    const [weight, setWeight] = useState(healthData.currentWeight.toString());
+    const [height, setHeight] = useState(String(userData?.height ?? ""));
+    const [weight, setWeight] = useState(String(healthData.currentWeight ?? ""));
     const initialBmi = typeof (healthData as any).bmi === "number" ? (healthData as any).bmi : (healthData as any).bmi?.latest?.bmi ?? 0;
     const [calculatedBMI, setCalculatedBMI] = useState<number>(initialBmi);
 

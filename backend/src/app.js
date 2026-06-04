@@ -9,6 +9,7 @@ import healthRoutes from "./routes/health.routes.js";
 import bmiRoutes from "./routes/bmi.routes.js";
 import caloriesRoutes from "./routes/calories.routes.js";
 import statsRoutes from "./routes/stats.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 import { notFound, errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
@@ -44,6 +45,7 @@ app.use("/api/calories", caloriesRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/water", waterRoutes);
 app.use("/api/health", healthRoutes);
+app.use("/api/notification", notificationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

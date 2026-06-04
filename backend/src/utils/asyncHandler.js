@@ -8,7 +8,7 @@ export const asyncHandler = (handler) => (req, res, next) => {
     const result = handler(req, res, next);
 
     if (result && typeof result.then === "function") {
-      result.catch((err) => {
+      return result.catch((err) => {
         try {
           return next(err);
         } catch (e) {
@@ -18,6 +18,8 @@ export const asyncHandler = (handler) => (req, res, next) => {
         }
       });
     }
+
+    return result;
   } catch (err) {
     // synchronous error
     return next(err);

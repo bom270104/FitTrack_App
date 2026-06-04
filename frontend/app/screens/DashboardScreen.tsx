@@ -2,7 +2,7 @@
 
 import { useApp } from "../app-context";
 import { BottomNav } from "../bottom-nav";
-import { Bell, Flame, Droplets, Target, TrendingDown, ChevronRight } from "lucide-react";
+import { Bell, Flame, Droplets, Target, TrendingDown, ChevronRight, Sigma } from "lucide-react";
 
 export function DashboardScreen() {
     const { userData, healthData, setScreen } = useApp();
@@ -33,7 +33,7 @@ export function DashboardScreen() {
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-sm text-muted-foreground">Good morning</p>
-                        <h1 className="text-xl font-bold text-foreground">{userData.name}</h1>
+                        <h1 className="text-xl font-bold text-foreground">{userData?.name ?? ""}</h1>
                     </div>
                     <button className="relative flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                         <Bell className="h-5 w-5 text-foreground" />
@@ -132,6 +132,18 @@ export function DashboardScreen() {
                             <p className="text-xs text-muted-foreground">deficit for weight loss</p>
                         </div>
                     </div>
+                    <button onClick={() => setScreen("calories")} className="mt-4 flex w-full items-center justify-between rounded-xl bg-muted px-4 py-3 text-left">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                <Sigma className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-foreground">Open TDEE calculator</p>
+                                <p className="text-xs text-muted-foreground">Compute calories for gain, lose, or maintain</p>
+                            </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </button>
                 </div>
             </div>
 

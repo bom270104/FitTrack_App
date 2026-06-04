@@ -31,6 +31,10 @@ const notificationSettingSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  lastSent: {
+    type: Date,
+    default: null,
+  },
 });
 
 const NotificationSetting = mongoose.model(

@@ -6,12 +6,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Activity, Mail, Lock, Eye, EyeOff, User, ArrowLeft, ArrowRight } from "lucide-react";
 
+const genderOptions = [
+    { label: "Nam", value: "male" },
+    { label: "Nữ", value: "female" },
+    { label: "Khác", value: "other" },
+];
+
+const activityOptions = [
+    { label: "Ít vận động", value: "sedentary" },
+    { label: "Vận động nhẹ", value: "light" },
+    { label: "Vận động vừa", value: "moderate" },
+    { label: "Vận động nhiều", value: "active" },
+    { label: "Rất năng động", value: "very_active" },
+];
+
+const goalOptions = [
+    { label: "Tăng cân", value: "gain" },
+    { label: "Giảm cân", value: "lose" },
+    { label: "Giữ cân", value: "maintain" },
+];
+
 export function RegisterScreen() {
     const { setScreen, register } = useApp();
     const [showPassword, setShowPassword] = useState(false);
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [age, setAge] = useState("18");
+    const [gender, setGender] = useState("male");
+    const [height, setHeight] = useState("170");
+    const [weight, setWeight] = useState("70");
+    const [activityLevel, setActivityLevel] = useState("moderate");
+    const [goal, setGoal] = useState("maintain");
+    const [dailyWaterGoal, setDailyWaterGoal] = useState("2000");
 
     const handleRegister = async () => {
         if (!name || !email || !password) {
@@ -24,13 +51,13 @@ export function RegisterScreen() {
                 fullName: name,
                 email,
                 password,
-                // default placeholders for required fields not collected in this simple form
-                age: 18,
-                gender: "male",
-                height: 170,
-                weight: 70,
-                activityLevel: "moderate",
-                goal: "maintain",
+                age: Number(age),
+                gender,
+                height: Number(height),
+                weight: Number(weight),
+                activityLevel,
+                goal,
+                dailyWaterGoal: Number(dailyWaterGoal),
             };
 
             const ok = await register(payload);
@@ -75,6 +102,56 @@ export function RegisterScreen() {
                         <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                         <Input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10" />
                     </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Age</label>
+                        <Input type="number" value={age} onChange={(e) => setAge(e.target.value)} className="h-12 rounded-xl border-0 bg-muted" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Gender</label>
+                        <select value={gender} onChange={(e) => setGender(e.target.value)} className="h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
+                            {genderOptions.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Height (cm)</label>
+                        <Input type="number" value={height} onChange={(e) => setHeight(e.target.value)} className="h-12 rounded-xl border-0 bg-muted" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Weight (kg)</label>
+                        <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-12 rounded-xl border-0 bg-muted" />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Activity Level</label>
+                        <select value={activityLevel} onChange={(e) => setActivityLevel(e.target.value)} className="h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
+                            {activityOptions.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Goal</label>
+                        <select value={goal} onChange={(e) => setGoal(e.target.value)} className="h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
+                            {goalOptions.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Daily water goal (ml)</label>
+                    <Input type="number" value={dailyWaterGoal} onChange={(e) => setDailyWaterGoal(e.target.value)} className="h-12 rounded-xl border-0 bg-muted" />
                 </div>
 
                 <div className="space-y-2">

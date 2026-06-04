@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import { AppError } from "../utils/errors.js";
 import { generateToken } from "../utils/jwt.js";
+import { isMailerConfigured, sendMail } from "./mailerService.js";
 
 export const registerUser = async (payload) => {
   const existingUser = await User.findOne({ email: payload.email });
@@ -13,6 +14,23 @@ export const registerUser = async (payload) => {
   // fetch sanitized user (password is excluded by schema select:false)
   const user = await User.findById(created._id);
   const token = generateToken({ userId: user._id.toString() });
+
+  if (isMailerConfigured()) {
+    try {
+      await sendMail({
+        to: user.email,
+        subject: "Welcome to FitTrack",
+        text:
+          `Hi ${user.fullName || "user"},\n\n` +
+          "Your FitTrack account has been created successfully. You can now use this Gmail address to test SMTP emails and receive water reminders.\n\n" +
+          "— FitTrack",
+      });
+    } catch (error) {
+      // Welcome email is best-effort; do not block registration.
+      // eslint-disable-next-line no-console
+      console.error("Failed to send welcome email:", error.message || error);
+    }
+  }
 
   return { user, token };
 };

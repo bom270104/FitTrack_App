@@ -6,6 +6,7 @@ import { LoginScreen } from "./screens/LoginScreen";
 import { RegisterScreen } from "./screens/RegisterScreen";
 import { DashboardScreen } from "./screens/DashboardScreen";
 import { BMIScreen } from "./screens/BMIScreen";
+import { CaloriesScreen } from "./screens/CaloriesScreen";
 import { WaterTrackerScreen } from "./screens/WaterTrackerScreen";
 import { StatisticsScreen } from "./screens/StatisticsScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
@@ -21,6 +22,7 @@ export default function Page() {
             {screen === "register" && <RegisterScreen />}
             {screen === "dashboard" && <DashboardScreen />}
             {screen === "bmi" && <BMIScreen />}
+            {screen === "calories" && <CaloriesScreen />}
             {screen === "water" && <WaterTrackerScreen />}
             {screen === "statistics" && <StatisticsScreen />}
             {screen === "profile" && <ProfileScreen />}
