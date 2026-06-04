@@ -91,55 +91,7 @@ export function RegisterScreen() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Age</label>
-                        <Input type="number" value={age} onChange={(e) => setAge(e.target.value)} className="h-12 rounded-xl border-0 bg-muted" />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Gender</label>
-                        <select value={gender} onChange={(e) => setGender(e.target.value)} className="h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
-                            {genderOptions.map((option) => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Height (cm)</label>
-                        <Input type="number" value={height} onChange={(e) => setHeight(e.target.value)} className="h-12 rounded-xl border-0 bg-muted" />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Weight (kg)</label>
-                        <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-12 rounded-xl border-0 bg-muted" />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Activity Level</label>
-                        <select value={activityLevel} onChange={(e) => setActivityLevel(e.target.value)} className="h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
-                            {activityOptions.map((option) => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Goal</label>
-                        <select value={goal} onChange={(e) => setGoal(e.target.value)} className="h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
-                            {goalOptions.map((option) => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Daily water goal (ml)</label>
-                    <Input type="number" value={dailyWaterGoal} onChange={(e) => setDailyWaterGoal(e.target.value)} className="h-12 rounded-xl border-0 bg-muted" />
-                </div>
+                {/* health/profile fields moved to Profile screen after login */}
 
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Password</label>
