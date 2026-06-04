@@ -32,13 +32,7 @@ export function RegisterScreen() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [age, setAge] = useState("18");
-    const [gender, setGender] = useState("male");
-    const [height, setHeight] = useState("170");
-    const [weight, setWeight] = useState("70");
-    const [activityLevel, setActivityLevel] = useState("moderate");
-    const [goal, setGoal] = useState("maintain");
-    const [dailyWaterGoal, setDailyWaterGoal] = useState("2000");
+    
 
     const handleRegister = async () => {
         if (!name || !email || !password) {
@@ -51,13 +45,6 @@ export function RegisterScreen() {
                 fullName: name,
                 email,
                 password,
-                age: Number(age),
-                gender,
-                height: Number(height),
-                weight: Number(weight),
-                activityLevel,
-                goal,
-                dailyWaterGoal: Number(dailyWaterGoal),
             };
 
             const ok = await register(payload);

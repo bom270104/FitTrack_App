@@ -25,10 +25,14 @@ export const register = asyncHandler(async (req, res) => {
   }
   const { user, token } = result;
 
+  const profileComplete = Boolean(
+    user && typeof user.age === "number" && typeof user.height === "number" && typeof user.weight === "number"
+  );
+
   return sendSuccess(res, {
     statusCode: 201,
     message: "User registered successfully",
-    data: { user, token },
+    data: { user, token, profileComplete },
   });
 });
 

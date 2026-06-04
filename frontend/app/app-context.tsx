@@ -136,10 +136,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                     }
 
                     // fetch profile and initial health data
-                    await fetchProfile(t);
+                    const profile = await fetchProfile(t);
                     await fetchHealth();
 
                     setLoading(false);
+                    // decide where to redirect based on profile completeness
+                    if (!profile || profile.age === undefined || profile.height === undefined || profile.weight === undefined) {
+                        setScreen("profile");
+                        return true;
+                    }
+
                     setScreen("dashboard");
                     return true;
                 } catch (err) {
@@ -170,10 +176,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                         setToken(t);
                     }
 
-                    await fetchProfile(t);
+                    const profile = await fetchProfile(t);
                     await fetchHealth();
 
                     setLoading(false);
+                    const profileComplete = body.data?.profileComplete;
+                    if (profileComplete === true) {
+                        setScreen("dashboard");
+                        return true;
+                    }
+
+                    if (!profile || profile.age === undefined || profile.height === undefined || profile.weight === undefined) {
+                        setScreen("profile");
+                        return true;
+                    }
+
                     setScreen("dashboard");
                     return true;
                 } catch (err) {
@@ -344,18 +361,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 setUserData({
                     name: body.data.fullName || body.data.name || "",
                     email: body.data.email,
-                    age: body.data.age || 18,
-                    height: body.data.height || 170,
-                    weight: body.data.weight || 70,
-                    gender: body.data.gender || "male",
-                    activityLevel: body.data.activityLevel || "moderate",
-                    goal: body.data.goal || "maintain",
-                    dailyWaterGoal: body.data.dailyWaterGoal || 2000,
+                    age: body.data.age === undefined ? undefined : body.data.age,
+                    height: body.data.height === undefined ? undefined : body.data.height,
+                    weight: body.data.weight === undefined ? undefined : body.data.weight,
+                    gender: body.data.gender === undefined ? undefined : body.data.gender,
+                    activityLevel: body.data.activityLevel === undefined ? undefined : body.data.activityLevel,
+                    goal: body.data.goal === undefined ? undefined : body.data.goal,
+                    dailyWaterGoal: body.data.dailyWaterGoal === undefined ? undefined : body.data.dailyWaterGoal,
                 });
+                return body.data;
             }
+            return null;
         } catch (err) {
             // eslint-disable-next-line no-console
             console.error(err);
+            return null;
         }
     }
 
