@@ -8,17 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const genderOptions = [
-    { label: "Male", value: "male" },
-    { label: "Female", value: "female" },
-    { label: "Other", value: "other" },
+    { label: "Nam", value: "male" },
+    { label: "Nữ", value: "female" },
+    { label: "Khác", value: "other" },
 ];
 
 const activityOptions = [
-    { label: "Sedentary", value: "sedentary" },
-    { label: "Light", value: "light" },
-    { label: "Moderate", value: "moderate" },
-    { label: "Active", value: "active" },
-    { label: "Very active", value: "very_active" },
+    { label: "Ít vận động", value: "sedentary" },
+    { label: "Vận động nhẹ", value: "light" },
+    { label: "Vận động vừa", value: "moderate" },
+    { label: "Vận động nhiều", value: "active" },
+    { label: "Rất năng động", value: "very_active" },
 ];
 
 const goalOptions = [
@@ -114,22 +114,22 @@ export function CaloriesScreen() {
                 </div>
 
                 <div className="mb-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Input data</h3>
+                    <h3 className="mb-4 text-sm font-semibold text-foreground">Nhập dữ liệu</h3>
                     <div className="grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label className="text-xs font-medium text-muted-foreground">Height (cm)</label>
+                            <label className="text-xs font-medium text-muted-foreground">Chiều cao (cm)</label>
                             <Input value={height} onChange={(e) => setHeight(e.target.value)} type="number" className="mt-1 h-12 rounded-xl border-0 bg-muted" />
                         </div>
                         <div>
-                            <label className="text-xs font-medium text-muted-foreground">Weight (kg)</label>
+                            <label className="text-xs font-medium text-muted-foreground">Cân nặng (kg)</label>
                             <Input value={weight} onChange={(e) => setWeight(e.target.value)} type="number" className="mt-1 h-12 rounded-xl border-0 bg-muted" />
                         </div>
                         <div>
-                            <label className="text-xs font-medium text-muted-foreground">Age</label>
+                            <label className="text-xs font-medium text-muted-foreground">Tuổi</label>
                             <Input value={age} onChange={(e) => setAge(e.target.value)} type="number" className="mt-1 h-12 rounded-xl border-0 bg-muted" />
                         </div>
                         <div>
-                            <label className="text-xs font-medium text-muted-foreground">Gender</label>
+                            <label className="text-xs font-medium text-muted-foreground">Giới tính</label>
                             <select value={gender} onChange={(e) => setGender(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
                                 {genderOptions.map((option) => (
                                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -137,7 +137,7 @@ export function CaloriesScreen() {
                             </select>
                         </div>
                         <div>
-                            <label className="text-xs font-medium text-muted-foreground">Activity level</label>
+                            <label className="text-xs font-medium text-muted-foreground">Mức độ hoạt động</label>
                             <select value={activityLevel} onChange={(e) => setActivityLevel(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
                                 {activityOptions.map((option) => (
                                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -145,7 +145,7 @@ export function CaloriesScreen() {
                             </select>
                         </div>
                         <div>
-                            <label className="text-xs font-medium text-muted-foreground">Goal</label>
+                            <label className="text-xs font-medium text-muted-foreground">Mục tiêu</label>
                             <select value={goal} onChange={(e) => setGoal(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
                                 {goalOptions.map((option) => (
                                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -157,13 +157,13 @@ export function CaloriesScreen() {
                     {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
 
                     <Button onClick={calculateCalories} disabled={loading} className="mt-4 h-12 w-full rounded-xl bg-primary text-primary-foreground">
-                        {loading ? "Calculating..." : "Calculate TDEE"}
+                        {loading ? "Đang tính..." : "Tính TDEE"}
                     </Button>
                 </div>
 
                 {result && (
                     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                        <h3 className="mb-4 text-sm font-semibold text-foreground">Result</h3>
+                        <h3 className="mb-4 text-sm font-semibold text-foreground">Kết quả</h3>
                         <div className="grid grid-cols-3 gap-3">
                             <div className="rounded-xl bg-muted p-4">
                                 <p className="text-xs text-muted-foreground">BMR</p>
@@ -174,7 +174,7 @@ export function CaloriesScreen() {
                                 <p className="mt-1 text-xl font-bold text-foreground">{result.tdee}</p>
                             </div>
                             <div className="rounded-xl bg-muted p-4">
-                                <p className="text-xs text-muted-foreground">Goal calories</p>
+                                <p className="text-xs text-muted-foreground">Calo mục tiêu</p>
                                 <p className="mt-1 text-xl font-bold text-foreground">{result.recommendedCalories}</p>
                             </div>
                         </div>

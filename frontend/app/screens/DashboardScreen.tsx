@@ -32,7 +32,7 @@ export function DashboardScreen() {
             <div className="px-5 pb-4 pt-14">
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-sm text-muted-foreground">Good morning</p>
+                        <p className="text-sm text-muted-foreground">Chào buổi sáng</p>
                         <h1 className="text-xl font-bold text-foreground">{userData?.name ?? ""}</h1>
                     </div>
                     <button className="relative flex h-10 w-10 items-center justify-center rounded-full bg-muted">
@@ -46,7 +46,7 @@ export function DashboardScreen() {
                 <button onClick={() => setScreen("bmi")} className="mb-4 w-full rounded-3xl bg-gradient-to-br from-primary to-secondary p-5 text-left">
                     <div className="mb-4 flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-primary-foreground/80">Your BMI</p>
+                            <p className="text-sm font-medium text-primary-foreground/80">BMI của bạn</p>
                             <div className="flex items-baseline gap-2">
                                 <span className="text-4xl font-bold text-primary-foreground">{asDisplay(healthData.bmi)}</span>
                                 <span className="text-sm text-primary-foreground/70">kg/m2</span>
@@ -57,7 +57,7 @@ export function DashboardScreen() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-primary-foreground/20 px-3 py-1 text-xs font-medium text-primary-foreground">Normal Weight</span>
+                        <span className="rounded-full bg-primary-foreground/20 px-3 py-1 text-xs font-medium text-primary-foreground">Bình thường</span>
                         <ChevronRight className="ml-auto h-4 w-4 text-primary-foreground/70" />
                     </div>
                 </button>
@@ -68,7 +68,7 @@ export function DashboardScreen() {
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/20">
                                 <Flame className="h-4 w-4 text-accent" />
                             </div>
-                            <span className="text-xs font-medium text-muted-foreground">Calories</span>
+                            <span className="text-xs font-medium text-muted-foreground">Calo</span>
                         </div>
                         <div className="mb-2">
                             <span className="text-2xl font-bold text-foreground">{asDisplay(healthData.dailyCalories)}</span>
@@ -84,7 +84,7 @@ export function DashboardScreen() {
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/20">
                                 <Droplets className="h-4 w-4 text-secondary" />
                             </div>
-                            <span className="text-xs font-medium text-muted-foreground">Water</span>
+                            <span className="text-xs font-medium text-muted-foreground">Nước</span>
                         </div>
                         <div className="mb-2">
                             <span className="text-2xl font-bold text-foreground">{asDisplay(healthData.waterIntake)}</span>
@@ -103,7 +103,7 @@ export function DashboardScreen() {
                                 <TrendingDown className="h-5 w-5 text-primary" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-foreground">Weight Goal</p>
+                                <p className="text-sm font-semibold text-foreground">Mục tiêu cân nặng</p>
                                 <p className="text-xs text-muted-foreground">{asDisplay(userData?.weight)}kg → {asDisplay(healthData.targetWeight)}kg</p>
                             </div>
                         </div>
@@ -111,7 +111,7 @@ export function DashboardScreen() {
                     </div>
                     <div className="space-y-2">
                         <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">Progress</span>
+                            <span className="text-muted-foreground">Tiến độ</span>
                             <span className="font-semibold text-primary">{Math.max(0, weightProgress)}%</span>
                         </div>
                         <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
@@ -121,15 +121,15 @@ export function DashboardScreen() {
                 </button>
 
                 <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-3 text-sm font-semibold text-foreground">Daily Energy Expenditure</h3>
+                    <h3 className="mb-3 text-sm font-semibold text-foreground">Năng lượng tiêu thụ hàng ngày</h3>
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-3xl font-bold text-foreground">{asDisplay(healthData.tdee)}</p>
-                            <p className="text-xs text-muted-foreground">calories/day (TDEE)</p>
+                            <p className="text-xs text-muted-foreground">kcal/ngày (TDEE)</p>
                         </div>
                         <div className="text-right">
                             <p className="text-sm font-semibold text-primary">-200 cal</p>
-                            <p className="text-xs text-muted-foreground">deficit for weight loss</p>
+                            <p className="text-xs text-muted-foreground">thâm hụt để giảm cân</p>
                         </div>
                     </div>
                     <button onClick={() => setScreen("calories")} className="mt-4 flex w-full items-center justify-between rounded-xl bg-muted px-4 py-3 text-left">
@@ -138,8 +138,8 @@ export function DashboardScreen() {
                                 <Sigma className="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-foreground">Open TDEE calculator</p>
-                                <p className="text-xs text-muted-foreground">Compute calories for gain, lose, or maintain</p>
+                                <p className="text-sm font-medium text-foreground">Mở máy tính TDEE</p>
+                                <p className="text-xs text-muted-foreground">Tính calo cho tăng, giảm hoặc giữ cân</p>
                             </div>
                         </div>
                         <ChevronRight className="h-4 w-4 text-muted-foreground" />

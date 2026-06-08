@@ -5,11 +5,11 @@ import { Home, BarChart3, Droplets, User, Target } from "lucide-react";
 import { useApp, type ScreenName } from "./app-context";
 
 const items: Array<{ key: ScreenName; label: string; icon: typeof Home }> = [
-    { key: "dashboard", label: "Home", icon: Home },
+    { key: "dashboard", label: "Trang chủ", icon: Home },
     { key: "bmi", label: "BMI", icon: Target },
-    { key: "water", label: "Water", icon: Droplets },
-    { key: "statistics", label: "Stats", icon: BarChart3 },
-    { key: "profile", label: "Profile", icon: User },
+    { key: "water", label: "Nước", icon: Droplets },
+    { key: "statistics", label: "Thống kê", icon: BarChart3 },
+    { key: "profile", label: "Hồ sơ", icon: User },
 ];
 
 export function BottomNav() {

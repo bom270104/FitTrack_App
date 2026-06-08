@@ -64,17 +64,17 @@ export function NotificationSettings({ onClose }: { onClose: () => void }) {
             });
             if (!res.ok) {
                 const b = await res.json().catch(() => ({}));
-                setError(b.message || "Save failed");
+                setError(b.message || "Lưu thất bại");
                 setLoading(false);
                 return;
             }
             setLoading(false);
-            setSuccess("Notification setting saved");
+            setSuccess("Đã lưu cài đặt thông báo");
             onClose();
         } catch (err) {
             // eslint-disable-next-line no-console
             console.error(err);
-            setError("Network error");
+            setError("Lỗi mạng");
             setLoading(false);
         }
     }
@@ -90,7 +90,7 @@ export function NotificationSettings({ onClose }: { onClose: () => void }) {
                 return;
             }
             setLoading(false);
-            setSuccess("Notification setting removed");
+            setSuccess("Đã xóa cài đặt thông báo");
             onClose();
         } catch (err) {
             // eslint-disable-next-line no-console
@@ -110,14 +110,14 @@ export function NotificationSettings({ onClose }: { onClose: () => void }) {
             });
             const body = await res.json().catch(() => ({}));
             if (!res.ok) {
-                setError(body.message || "Unable to send test email");
+                setError(body.message || "Không thể gửi email kiểm tra");
             } else {
-                setSuccess(body.message || "Test email sent");
+                setSuccess(body.message || "Email kiểm tra đã gửi");
             }
         } catch (err) {
             // eslint-disable-next-line no-console
             console.error(err);
-            setError("Network error");
+            setError("Lỗi mạng");
         } finally {
             setLoading(false);
         }
@@ -126,25 +126,25 @@ export function NotificationSettings({ onClose }: { onClose: () => void }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="w-[min(640px,95%)] rounded-2xl bg-card p-6">
-                <h3 className="mb-4 text-lg font-semibold">Notification Settings</h3>
+                <h3 className="mb-4 text-lg font-semibold">Cài đặt thông báo</h3>
 
                 <div className="mb-3 flex items-center justify-between">
-                    <label className="text-sm">Enabled</label>
+                    <label className="text-sm">Bật</label>
                     <input type="checkbox" checked={!!setting.enabled} onChange={(e) => setSetting({ ...setting, enabled: e.target.checked })} />
                 </div>
 
                 <div className="mb-3">
-                    <label className="text-sm">Interval (hours)</label>
+                    <label className="text-sm">Khoảng (giờ)</label>
                     <input className="ml-3 w-20 rounded border px-2 py-1" type="number" min={1} value={setting.intervalHours ?? 3} onChange={(e) => setSetting({ ...setting, intervalHours: Number(e.target.value) })} />
                 </div>
 
                 <div className="mb-3 flex gap-4">
                     <div>
-                        <label className="text-sm">Start Time</label>
+                        <label className="text-sm">Giờ bắt đầu</label>
                         <input className="ml-3 rounded border px-2 py-1" type="time" value={setting.startTime ?? "08:00"} onChange={(e) => setSetting({ ...setting, startTime: e.target.value })} />
                     </div>
                     <div>
-                        <label className="text-sm">End Time</label>
+                        <label className="text-sm">Giờ kết thúc</label>
                         <input className="ml-3 rounded border px-2 py-1" type="time" value={setting.endTime ?? "22:00"} onChange={(e) => setSetting({ ...setting, endTime: e.target.value })} />
                     </div>
                 </div>
@@ -154,13 +154,13 @@ export function NotificationSettings({ onClose }: { onClose: () => void }) {
 
                 <div className="mt-4 flex justify-end gap-3">
                     <button className="rounded-md border px-4 py-2" onClick={sendTestEmail} disabled={loading}>
-                        Send Test Email
+                        Gửi email thử
                     </button>
                     <button className="rounded-md border px-4 py-2" onClick={removeSetting} disabled={loading}>
-                        Remove
+                        Xóa
                     </button>
                     <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground" onClick={save} disabled={loading}>
-                        Save
+                        Lưu
                     </button>
                 </div>
             </div>

@@ -32,7 +32,7 @@ export function RegisterScreen() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    
+
 
     const handleRegister = async () => {
         if (!name || !email || !password) {
@@ -69,52 +69,50 @@ export function RegisterScreen() {
                     <Activity className="h-9 w-9 text-primary-foreground" strokeWidth={2.5} />
                 </div>
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold text-foreground">Create Account</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">Start your health journey today</p>
+                    <h1 className="text-2xl font-bold text-foreground">Tạo tài khoản</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">Bắt đầu hành trình sức khỏe của bạn</p>
                 </div>
             </div>
 
             <div className="flex flex-1 flex-col gap-4">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Full Name</label>
+                    <label className="text-sm font-medium text-foreground">Họ và tên</label>
                     <div className="relative">
                         <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                        <Input type="text" placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10" />
+                        <Input type="text" placeholder="Nhập tên của bạn" value={name} onChange={(e) => setName(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10" />
                     </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Email</label>
                     <div className="relative">
                         <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                        <Input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10" />
+                        <Input type="email" placeholder="Nhập email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10" />
                     </div>
                 </div>
 
                 {/* health/profile fields moved to Profile screen after login */}
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Password</label>
                     <div className="relative">
                         <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                        <Input type={showPassword ? "text" : "password"} placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10 pr-10" />
+                        <Input type={showPassword ? "text" : "password"} placeholder="Tạo mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10 pr-10" />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
                             {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
                         </button>
                     </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground">By signing up, you agree to our <span className="text-primary">Terms of Service</span> and <span className="text-primary">Privacy Policy</span></p>
+                <p className="text-xs text-muted-foreground">Bằng cách đăng ký, bạn đồng ý với <span className="text-primary">Điều khoản dịch vụ</span> và <span className="text-primary">Chính sách bảo mật</span></p>
 
                 <Button onClick={handleRegister} className="mt-4 h-14 rounded-xl bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90">
-                    Create Account
+                    Tạo tài khoản
                     <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
             </div>
 
             <div className="mt-6 text-center">
-                <span className="text-sm text-muted-foreground">Already have an account? </span>
-                <button onClick={() => setScreen("login")} className="text-sm font-semibold text-primary">Sign In</button>
+                <span className="text-sm text-muted-foreground">Đã có tài khoản? </span>
+                <button onClick={() => setScreen("login")} className="text-sm font-semibold text-primary">Đăng nhập</button>
             </div>
         </div>
     );

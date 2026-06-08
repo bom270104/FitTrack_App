@@ -14,19 +14,19 @@ export function LoginScreen() {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            alert("Please enter email and password");
+            alert("Vui lòng nhập email và mật khẩu");
             return;
         }
 
         try {
             const ok = await login(email, password);
             if (!ok) {
-                alert("Login failed");
+                alert("Đăng nhập thất bại");
             }
         } catch (err) {
             // eslint-disable-next-line no-console
             console.error(err);
-            alert("Unable to login. Please try again later.");
+            alert("Không thể đăng nhập. Vui lòng thử lại sau.");
         }
     };
 
@@ -37,8 +37,8 @@ export function LoginScreen() {
                     <Activity className="h-9 w-9 text-primary-foreground" strokeWidth={2.5} />
                 </div>
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">Sign in to continue your journey</p>
+                    <h1 className="text-2xl font-bold text-foreground">Chào mừng trở lại</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">Đăng nhập để tiếp tục hành trình</p>
                 </div>
             </div>
 
@@ -47,7 +47,7 @@ export function LoginScreen() {
                     <label className="text-sm font-medium text-foreground">Email</label>
                     <div className="relative">
                         <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                        <Input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10" />
+                        <Input type="email" placeholder="Nhập email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10" />
                     </div>
                 </div>
 
@@ -55,15 +55,15 @@ export function LoginScreen() {
                     <label className="text-sm font-medium text-foreground">Password</label>
                     <div className="relative">
                         <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                        <Input type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10 pr-10" />
+                        <Input type={showPassword ? "text" : "password"} placeholder="Nhập mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 rounded-xl border-0 bg-muted pl-10 pr-10" />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
                             {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
                         </button>
                     </div>
                 </div>
 
-                <button onClick={() => alert("Password reset is not implemented yet. Please contact support or use the test email flow.")} className="self-end text-sm font-medium text-primary">
-                    Forgot Password?
+                <button onClick={() => alert("Chức năng đặt lại mật khẩu chưa được hỗ trợ. Vui lòng liên hệ hỗ trợ.")} className="self-end text-sm font-medium text-primary">
+                    Quên mật khẩu?
                 </button>
 
                 <Button onClick={handleLogin} className="mt-4 h-14 rounded-xl bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90">
@@ -73,7 +73,7 @@ export function LoginScreen() {
 
                 <div className="my-4 flex items-center gap-4">
                     <div className="h-px flex-1 bg-border" />
-                    <span className="text-sm text-muted-foreground">or continue with</span>
+                    <span className="text-sm text-muted-foreground">hoặc tiếp tục với</span>
                     <div className="h-px flex-1 bg-border" />
                 </div>
 
@@ -95,8 +95,8 @@ export function LoginScreen() {
             </div>
 
             <div className="mt-6 text-center">
-                <span className="text-sm text-muted-foreground">Don&apos;t have an account? </span>
-                <button onClick={() => setScreen("register")} className="text-sm font-semibold text-primary">Sign Up</button>
+                <span className="text-sm text-muted-foreground">Chưa có tài khoản? </span>
+                <button onClick={() => setScreen("register")} className="text-sm font-semibold text-primary">Đăng ký</button>
             </div>
         </div>
     );

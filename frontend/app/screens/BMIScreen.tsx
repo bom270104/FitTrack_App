@@ -8,17 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const bmiCategories = [
-    { range: "< 18.5", label: "Underweight", color: "bg-secondary" },
-    { range: "18.5 - 24.9", label: "Normal", color: "bg-primary" },
-    { range: "25 - 29.9", label: "Overweight", color: "bg-chart-4" },
-    { range: "> 30", label: "Obese", color: "bg-destructive" },
+    { range: "< 18.5", label: "Gầy", color: "bg-secondary" },
+    { range: "18.5 - 24.9", label: "Bình thường", color: "bg-primary" },
+    { range: "25 - 29.9", label: "Thừa cân", color: "bg-chart-4" },
+    { range: "> 30", label: "Béo phì", color: "bg-destructive" },
 ];
 
 function getBMICategory(bmi: number) {
-    if (bmi < 18.5) return { label: "Underweight", color: "text-secondary" };
-    if (bmi < 25) return { label: "Normal Weight", color: "text-primary" };
-    if (bmi < 30) return { label: "Overweight", color: "text-chart-4" };
-    return { label: "Obese", color: "text-destructive" };
+    if (bmi < 18.5) return { label: "Gầy", color: "text-secondary" };
+    if (bmi < 25) return { label: "Bình thường", color: "text-primary" };
+    if (bmi < 30) return { label: "Thừa cân", color: "text-chart-4" };
+    return { label: "Béo phì", color: "text-destructive" };
 }
 
 export function BMIScreen() {
@@ -55,14 +55,14 @@ export function BMIScreen() {
                     <button onClick={() => setScreen("dashboard")} className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
                         <ArrowLeft className="h-5 w-5 text-foreground" />
                     </button>
-                    <h1 className="text-xl font-bold text-foreground">BMI Calculator</h1>
+                    <h1 className="text-xl font-bold text-foreground">Máy tính BMI</h1>
                 </div>
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 pb-28">
                 <div className="mb-6 rounded-3xl bg-gradient-to-br from-primary to-secondary p-6">
                     <div className="mb-6 text-center">
-                        <p className="mb-1 text-sm text-primary-foreground/80">Your BMI</p>
+                        <p className="mb-1 text-sm text-primary-foreground/80">BMI của bạn</p>
                         <p className="text-6xl font-bold text-primary-foreground">{calculatedBMI}</p>
                         <p className="mt-2 text-lg font-medium text-primary-foreground">{category.label}</p>
                     </div>
@@ -86,21 +86,21 @@ export function BMIScreen() {
                 </div>
 
                 <div className="mb-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Calculate Your BMI</h3>
+                    <h3 className="mb-4 text-sm font-semibold text-foreground">Tính BMI</h3>
 
                     <div className="space-y-4">
                         <div>
-                            <label className="text-xs font-medium text-muted-foreground">Height (cm)</label>
+                            <label className="text-xs font-medium text-muted-foreground">Chiều cao (cm)</label>
                             <Input type="number" value={height} onChange={(e) => setHeight(e.target.value)} className="mt-1 h-12 rounded-xl border-0 bg-muted text-lg font-semibold" placeholder="175" />
                         </div>
 
                         <div>
-                            <label className="text-xs font-medium text-muted-foreground">Weight (kg)</label>
+                            <label className="text-xs font-medium text-muted-foreground">Cân nặng (kg)</label>
                             <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} className="mt-1 h-12 rounded-xl border-0 bg-muted text-lg font-semibold" placeholder="70" />
                         </div>
 
                         <Button onClick={calculateBMI} className="h-12 w-full rounded-xl bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-                            Calculate BMI
+                            Tính BMI
                         </Button>
                     </div>
                 </div>
@@ -108,7 +108,7 @@ export function BMIScreen() {
                 <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                     <div className="mb-4 flex items-center gap-2">
                         <Info className="h-4 w-4 text-muted-foreground" />
-                        <h3 className="text-sm font-semibold text-foreground">BMI Categories</h3>
+                        <h3 className="text-sm font-semibold text-foreground">Phân loại BMI</h3>
                     </div>
 
                     <div className="space-y-3">

@@ -22,7 +22,7 @@ export function SplashScreen() {
                 </div>
                 <div className="text-center">
                     <h1 className="text-4xl font-bold tracking-tight text-primary-foreground">FitTrack</h1>
-                    <p className="mt-2 text-sm font-medium text-primary-foreground/80">Your Health Companion</p>
+                    <p className="mt-2 text-sm font-medium text-primary-foreground/80">Bạn đồng hành sức khỏe</p>
                 </div>
             </div>
 

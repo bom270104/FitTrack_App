@@ -26,7 +26,7 @@ export function WaterTrackerScreen() {
                     <button onClick={() => setScreen("dashboard")} className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
                         <ArrowLeft className="h-5 w-5 text-foreground" />
                     </button>
-                    <h1 className="text-xl font-bold text-foreground">Water Tracker</h1>
+                    <h1 className="text-xl font-bold text-foreground">Theo dõi nước</h1>
                 </div>
             </div>
 
@@ -50,23 +50,23 @@ export function WaterTrackerScreen() {
 
                     <div className="text-center">
                         <p className="text-4xl font-bold text-foreground">{healthData.waterIntake}ml</p>
-                        <p className="mt-1 text-sm text-muted-foreground">of {healthData.waterGoal}ml daily goal</p>
+                        <p className="mt-1 text-sm text-muted-foreground">trong mục tiêu hàng ngày {healthData.waterGoal}ml</p>
                     </div>
 
                     <div className="mt-4 flex items-center gap-6">
                         <div className="flex items-center gap-2">
                             <div className="h-3 w-3 rounded-full bg-secondary" />
-                            <span className="text-sm font-medium text-foreground">{percentage}% completed</span>
+                            <span className="text-sm font-medium text-foreground">{percentage}% hoàn thành</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="h-3 w-3 rounded-full bg-muted" />
-                            <span className="text-sm text-muted-foreground">{remaining}ml left</span>
+                            <span className="text-sm text-muted-foreground">{remaining}ml còn lại</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="mb-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Quick Add</h3>
+                    <h3 className="mb-4 text-sm font-semibold text-foreground">Thêm nhanh</h3>
                     <div className="grid grid-cols-2 gap-3">
                         {waterOptions.map((option) => (
                             <Button key={option.amount} variant="outline" onClick={async () => await addWater(option.amount)} className="flex h-16 flex-col gap-1 rounded-xl border-border hover:border-secondary hover:bg-secondary/10">
@@ -79,11 +79,11 @@ export function WaterTrackerScreen() {
 
                 <Button onClick={() => addWater(100)} className="h-14 w-full rounded-xl bg-secondary font-semibold text-secondary-foreground hover:bg-secondary/90">
                     <Plus className="mr-2 h-5 w-5" />
-                    Add Custom Amount
+                    Thêm lượng tùy chỉnh
                 </Button>
 
                 <div className="mt-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Today&apos;s Log</h3>
+                    <h3 className="mb-4 text-sm font-semibold text-foreground">Nhật ký hôm nay</h3>
                     <div className="space-y-3">
                         {(() => {
                             const logs = Array.isArray(healthData.waterHistory)

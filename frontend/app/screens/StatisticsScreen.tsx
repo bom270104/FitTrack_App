@@ -19,10 +19,10 @@ export function StatisticsScreen() {
         const bmiChange = weights.length > 1 ? Number((weights[weights.length - 1].weight - weights[0].weight).toFixed(1)) : 0;
 
         return [
-            { label: "Avg. Weight", value: avgWeight.toFixed(1), unit: "kg", change: `${bmiChange <= 0 ? "" : "+"}${bmiChange.toFixed(1)}kg`, positive: bmiChange <= 0, icon: Scale, color: "bg-primary/10 text-primary" },
-            { label: "Avg. Water", value: Math.round(avgWater).toLocaleString(), unit: "ml", change: healthData.waterIntake >= healthData.waterGoal ? "On track" : "Below goal", positive: healthData.waterIntake >= healthData.waterGoal, icon: Droplets, color: "bg-secondary/10 text-secondary" },
-            { label: "Avg. Calories", value: Math.round(healthData.dailyCalories).toLocaleString(), unit: "kcal", change: `${healthData.calorieGoal - healthData.dailyCalories >= 0 ? "-" : "+"}${Math.abs(healthData.calorieGoal - healthData.dailyCalories)}`, positive: healthData.dailyCalories <= healthData.calorieGoal, icon: Flame, color: "bg-accent/10 text-accent" },
-            { label: "BMI Change", value: Number(healthData.bmi).toFixed(1), unit: "kg/m2", change: "Current BMI", positive: true, icon: TrendingDown, color: "bg-chart-5/10 text-chart-5" },
+            { label: "Cân nặng TB", value: avgWeight.toFixed(1), unit: "kg", change: `${bmiChange <= 0 ? "" : "+"}${bmiChange.toFixed(1)}kg`, positive: bmiChange <= 0, icon: Scale, color: "bg-primary/10 text-primary" },
+            { label: "Nước TB", value: Math.round(avgWater).toLocaleString(), unit: "ml", change: healthData.waterIntake >= healthData.waterGoal ? "Đạt mục tiêu" : "Chưa đạt", positive: healthData.waterIntake >= healthData.waterGoal, icon: Droplets, color: "bg-secondary/10 text-secondary" },
+            { label: "Calo TB", value: Math.round(healthData.dailyCalories).toLocaleString(), unit: "kcal", change: `${healthData.calorieGoal - healthData.dailyCalories >= 0 ? "-" : "+"}${Math.abs(healthData.calorieGoal - healthData.dailyCalories)}`, positive: healthData.dailyCalories <= healthData.calorieGoal, icon: Flame, color: "bg-accent/10 text-accent" },
+            { label: "Thay đổi BMI", value: Number(healthData.bmi).toFixed(1), unit: "kg/m2", change: "BMI hiện tại", positive: true, icon: TrendingDown, color: "bg-chart-5/10 text-chart-5" },
         ];
     }, [healthData]);
 
@@ -47,7 +47,7 @@ export function StatisticsScreen() {
                     <button onClick={() => setScreen("dashboard")} className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
                         <ArrowLeft className="h-5 w-5 text-foreground" />
                     </button>
-                    <h1 className="text-xl font-bold text-foreground">Statistics</h1>
+                    <h1 className="text-xl font-bold text-foreground">Thống kê</h1>
                 </div>
             </div>
 
@@ -55,13 +55,13 @@ export function StatisticsScreen() {
                 <div className="mb-6 flex gap-2">
                     {(["Week", "Month", "Year"] as const).map((item) => (
                         <button key={item} onClick={() => setRange(item)} className={`flex-1 rounded-xl py-2 text-sm font-medium transition-all ${range === item ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                            {item}
+                            {item === "Week" ? "Tuần" : item === "Month" ? "Tháng" : "Năm"}
                         </button>
                     ))}
                 </div>
 
                 <div className="mb-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Weight Progress</h3>
+                    <h3 className="mb-4 text-sm font-semibold text-foreground">Tiến trình cân nặng</h3>
                     <div className="h-40">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartWeightData}>
@@ -75,7 +75,7 @@ export function StatisticsScreen() {
                 </div>
 
                 <div className="mb-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Water Intake</h3>
+                    <h3 className="mb-4 text-sm font-semibold text-foreground">Lượng nước</h3>
                     <div className="h-40">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={chartWaterData}>

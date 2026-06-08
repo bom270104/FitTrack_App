@@ -59,8 +59,8 @@ export const validateRegisterInput = (payload = {}) => {
     goal,
     dailyWaterGoal:
       payload.dailyWaterGoal === undefined ||
-      payload.dailyWaterGoal === null ||
-      payload.dailyWaterGoal === ""
+        payload.dailyWaterGoal === null ||
+        payload.dailyWaterGoal === ""
         ? undefined
         : parsePositiveNumber(payload.dailyWaterGoal, "dailyWaterGoal"),
   };

@@ -88,7 +88,7 @@ export function GoalsScreen() {
                         <button onClick={() => setScreen("dashboard")} className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
                             <ArrowLeft className="h-5 w-5 text-foreground" />
                         </button>
-                        <h1 className="text-xl font-bold text-foreground">Goals</h1>
+                        <h1 className="text-xl font-bold text-foreground">Mục tiêu</h1>
                     </div>
                     <button onClick={() => setShowAddGoal(!showAddGoal)} className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
                         <Plus className="h-5 w-5 text-primary-foreground" />
@@ -100,7 +100,7 @@ export function GoalsScreen() {
                 <div className="mb-6 rounded-3xl bg-gradient-to-br from-primary to-secondary p-6">
                     <div className="mb-4 flex items-center justify-between">
                         <div>
-                            <p className="text-sm text-primary-foreground/80">Weekly Progress</p>
+                            <p className="text-sm text-primary-foreground/80">Tiến độ tuần</p>
                             <p className="mt-1 text-3xl font-bold text-primary-foreground">78%</p>
                         </div>
                         <div className="relative h-16 w-16">
@@ -111,15 +111,15 @@ export function GoalsScreen() {
                             <Target className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-primary-foreground" />
                         </div>
                     </div>
-                    <p className="text-sm text-primary-foreground/80">You&apos;re doing great! Keep up the good work to reach your goals.</p>
+                    <p className="text-sm text-primary-foreground/80">Bạn đang làm tốt! Hãy tiếp tục để đạt được mục tiêu.</p>
                 </div>
 
                 {showAddGoal && (
                     <div className="mb-4 animate-in slide-in-from-top-2 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                        <h3 className="mb-4 text-sm font-semibold text-foreground">Add New Goal</h3>
+                        <h3 className="mb-4 text-sm font-semibold text-foreground">Thêm mục tiêu mới</h3>
                         <div className="space-y-3">
-                            <Input value={newGoal.title} onChange={(e) => setNewGoal((current) => ({ ...current, title: e.target.value }))} placeholder="Goal title" className="h-12 rounded-xl border-0 bg-muted" />
-                            <Input value={newGoal.target} onChange={(e) => setNewGoal((current) => ({ ...current, target: e.target.value }))} placeholder="Target value" className="h-12 rounded-xl border-0 bg-muted" />
+                            <Input value={newGoal.title} onChange={(e) => setNewGoal((current) => ({ ...current, title: e.target.value }))} placeholder="Tiêu đề mục tiêu" className="h-12 rounded-xl border-0 bg-muted" />
+                            <Input value={newGoal.target} onChange={(e) => setNewGoal((current) => ({ ...current, target: e.target.value }))} placeholder="Giá trị mục tiêu" className="h-12 rounded-xl border-0 bg-muted" />
                             <div className="flex gap-2">
                                 <Button type="button" variant={newGoal.unit === "kg" ? "default" : "outline"} onClick={() => setNewGoal((current) => ({ ...current, unit: "kg" }))} className="h-10 flex-1 rounded-xl">
                                     kg
@@ -132,8 +132,8 @@ export function GoalsScreen() {
                                 </Button>
                             </div>
                             <div className="flex gap-3">
-                                <Button variant="outline" onClick={() => setShowAddGoal(false)} className="h-12 flex-1 rounded-xl">Cancel</Button>
-                                <Button onClick={addGoal} className="h-12 flex-1 rounded-xl bg-primary text-primary-foreground">Add Goal</Button>
+                                <Button variant="outline" onClick={() => setShowAddGoal(false)} className="h-12 flex-1 rounded-xl">Hủy</Button>
+                                <Button onClick={addGoal} className="h-12 flex-1 rounded-xl bg-primary text-primary-foreground">Thêm mục tiêu</Button>
                             </div>
                         </div>
                     </div>
@@ -157,7 +157,7 @@ export function GoalsScreen() {
                                                 </div>
                                             )}
                                         </div>
-                                        <p className="mb-3 text-sm text-muted-foreground">Target: {goal.target}</p>
+                                        <p className="mb-3 text-sm text-muted-foreground">Mục tiêu: {goal.target}</p>
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-xs">
                                                 <span className="text-muted-foreground">{goal.current} / {goal.max} {goal.unit}</span>
@@ -175,8 +175,8 @@ export function GoalsScreen() {
                 </div>
 
                 <div className="mt-4 rounded-2xl bg-muted p-5">
-                    <p className="text-center text-sm font-medium text-foreground">&quot;The only bad workout is the one that didn&apos;t happen.&quot;</p>
-                    <p className="mt-2 text-center text-xs text-muted-foreground">Stay motivated!</p>
+                    <p className="text-center text-sm font-medium text-foreground">&quot;Bài tập tệ nhất là bài tập bạn không làm.&quot;</p>
+                    <p className="mt-2 text-center text-xs text-muted-foreground">Giữ động lực nhé!</p>
                 </div>
             </div>
 

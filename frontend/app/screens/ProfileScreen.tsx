@@ -29,11 +29,11 @@ const goalOptions = [
 ];
 
 const menuItems = [
-    { icon: Bell, label: "Notifications", action: "notifications" },
-    { icon: Moon, label: "Dark Mode", action: "darkmode", toggle: true },
-    { icon: Shield, label: "Privacy & Security", action: "privacy" },
-    { icon: HelpCircle, label: "Help & Support", action: "help" },
-    { icon: Settings, label: "App Settings", action: "settings" },
+    { icon: Bell, label: "Thông báo", action: "notifications" },
+    { icon: Moon, label: "Giao diện tối", action: "darkmode", toggle: true },
+    { icon: Shield, label: "Quyền riêng tư", action: "privacy" },
+    { icon: HelpCircle, label: "Trợ giúp", action: "help" },
+    { icon: Settings, label: "Cài đặt ứng dụng", action: "settings" },
 ];
 
 export function ProfileScreen() {
@@ -96,9 +96,9 @@ export function ProfileScreen() {
     };
 
     const userStats = [
-        { icon: Ruler, label: "Height", value: `${userData?.height ?? "-"} cm` },
-        { icon: Weight, label: "Weight", value: `${healthData.currentWeight ?? "-"} kg` },
-        { icon: Calendar, label: "Age", value: `${userData?.age ?? "-"} years` },
+        { icon: Ruler, label: "Chiều cao", value: `${userData?.height ?? "-"} cm` },
+        { icon: Weight, label: "Cân nặng", value: `${healthData.currentWeight ?? "-"} kg` },
+        { icon: Calendar, label: "Tuổi", value: `${userData?.age ?? "-"} tuổi` },
     ];
 
     const handleLogout = () => {
@@ -108,7 +108,7 @@ export function ProfileScreen() {
     return (
         <div className="flex h-full flex-col bg-background">
             <div className="px-5 pb-4 pt-14">
-                <h1 className="text-xl font-bold text-foreground">Profile</h1>
+                <h1 className="text-xl font-bold text-foreground">Hồ sơ</h1>
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 pb-28">
@@ -121,7 +121,7 @@ export function ProfileScreen() {
                             <h2 className="text-xl font-bold text-primary-foreground">{userData?.name ?? ""}</h2>
                             <p className="text-sm text-primary-foreground/80">{userData?.email ?? ""}</p>
                             <button onClick={openEditProfile} className="mt-2 rounded-full bg-primary-foreground/20 px-4 py-1.5 text-xs font-medium text-primary-foreground">
-                                Edit Profile
+                                Chỉnh sửa hồ sơ
                             </button>
                         </div>
                     </div>
@@ -144,8 +144,8 @@ export function ProfileScreen() {
                 <button onClick={() => setScreen("goals")} className="mb-4 w-full rounded-2xl border border-border bg-card p-5 text-left shadow-sm">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-sm font-semibold text-foreground">My Goals</h3>
-                            <p className="mt-1 text-xs text-muted-foreground">3 active goals</p>
+                            <h3 className="text-sm font-semibold text-foreground">Mục tiêu của tôi</h3>
+                            <p className="mt-1 text-xs text-muted-foreground">3 mục tiêu đang hoạt động</p>
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-sm font-semibold text-primary">78%</span>
@@ -168,22 +168,22 @@ export function ProfileScreen() {
                                 }
                                 if (item.action === "privacy") {
                                     setActiveInfo({
-                                        title: "Privacy & Security",
-                                        body: "Your profile data is stored securely on FitTrack backend. Token-based authentication protects private routes.",
+                                        title: "Quyền riêng tư",
+                                        body: "Dữ liệu hồ sơ của bạn được lưu trữ an toàn trên backend của FitTrack. Xác thực bằng token bảo vệ các tuyến riêng tư.",
                                     });
                                     return;
                                 }
                                 if (item.action === "help") {
                                     setActiveInfo({
-                                        title: "Help & Support",
-                                        body: "Use Dashboard for overview, BMI to calculate body index, Water to log drinking, and Statistics to review trends.",
+                                        title: "Trợ giúp",
+                                        body: "Sử dụng Dashboard để tổng quan, BMI để tính chỉ số cơ thể, Water để ghi lại lượng uống và Thống kê để xem xu hướng.",
                                     });
                                     return;
                                 }
                                 if (item.action === "settings") {
                                     setActiveInfo({
-                                        title: "App Settings",
-                                        body: "This demo currently supports profile, notification settings, and health tracking. Dark mode is kept as a local visual toggle.",
+                                        title: "Cài đặt ứng dụng",
+                                        body: "Bản demo hiện hỗ trợ hồ sơ, cài đặt thông báo và theo dõi sức khỏe. Chế độ tối được giữ như một tuỳ chọn giao diện cục bộ.",
                                     });
                                     return;
                                 }
@@ -218,7 +218,7 @@ export function ProfileScreen() {
                             <p className="text-sm text-muted-foreground">{activeInfo.body}</p>
                             <div className="mt-5 flex justify-end">
                                 <button onClick={() => setActiveInfo(null)} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-                                    Close
+                                    Đóng
                                 </button>
                             </div>
                         </div>
@@ -228,17 +228,17 @@ export function ProfileScreen() {
                 {showEditProfile && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
                         <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-xl">
-                            <h3 className="mb-4 text-lg font-semibold text-foreground">Edit Profile</h3>
+                            <h3 className="mb-4 text-lg font-semibold text-foreground">Chỉnh sửa hồ sơ</h3>
                             <div className="space-y-3">
-                                <Input value={profileForm.name} onChange={(e) => setProfileForm((current) => ({ ...current, name: e.target.value }))} placeholder="Full name" className="h-12 rounded-xl border-0 bg-muted" />
-                                <p className="text-xs text-muted-foreground">Email is read-only and follows the account registration.</p>
+                                <Input value={profileForm.name} onChange={(e) => setProfileForm((current) => ({ ...current, name: e.target.value }))} placeholder="Họ và tên" className="h-12 rounded-xl border-0 bg-muted" />
+                                <p className="text-xs text-muted-foreground">Email chỉ đọc và theo thông tin đăng ký tài khoản.</p>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Input value={profileForm.age} onChange={(e) => setProfileForm((current) => ({ ...current, age: e.target.value }))} placeholder="Age" type="number" className="h-12 rounded-xl border-0 bg-muted" />
-                                    <Input value={profileForm.height} onChange={(e) => setProfileForm((current) => ({ ...current, height: e.target.value }))} placeholder="Height" type="number" className="h-12 rounded-xl border-0 bg-muted" />
+                                    <Input value={profileForm.age} onChange={(e) => setProfileForm((current) => ({ ...current, age: e.target.value }))} placeholder="Tuổi" type="number" className="h-12 rounded-xl border-0 bg-muted" />
+                                    <Input value={profileForm.height} onChange={(e) => setProfileForm((current) => ({ ...current, height: e.target.value }))} placeholder="Chiều cao (cm)" type="number" className="h-12 rounded-xl border-0 bg-muted" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Input value={profileForm.weight} onChange={(e) => setProfileForm((current) => ({ ...current, weight: e.target.value }))} placeholder="Weight" type="number" className="h-12 rounded-xl border-0 bg-muted" />
-                                    <Input value={profileForm.dailyWaterGoal} onChange={(e) => setProfileForm((current) => ({ ...current, dailyWaterGoal: e.target.value }))} placeholder="Water goal" type="number" className="h-12 rounded-xl border-0 bg-muted" />
+                                    <Input value={profileForm.weight} onChange={(e) => setProfileForm((current) => ({ ...current, weight: e.target.value }))} placeholder="Cân nặng (kg)" type="number" className="h-12 rounded-xl border-0 bg-muted" />
+                                    <Input value={profileForm.dailyWaterGoal} onChange={(e) => setProfileForm((current) => ({ ...current, dailyWaterGoal: e.target.value }))} placeholder="Mục tiêu nước (ml)" type="number" className="h-12 rounded-xl border-0 bg-muted" />
                                 </div>
                                 <div className="grid grid-cols-3 gap-3">
                                     <select value={profileForm.gender} onChange={(e) => setProfileForm((current) => ({ ...current, gender: e.target.value }))} className="h-12 rounded-xl border border-border bg-muted px-3 text-sm outline-none">
@@ -264,10 +264,10 @@ export function ProfileScreen() {
 
                             <div className="mt-5 flex gap-3">
                                 <Button variant="outline" onClick={() => setShowEditProfile(false)} className="h-12 flex-1 rounded-xl border-border">
-                                    Cancel
+                                    Hủy
                                 </Button>
                                 <Button onClick={saveProfile} className="h-12 flex-1 rounded-xl bg-primary text-primary-foreground">
-                                    Save
+                                    Lưu
                                 </Button>
                             </div>
                         </div>
@@ -276,7 +276,7 @@ export function ProfileScreen() {
 
                 <button onClick={handleLogout} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-destructive/10 p-4 font-medium text-destructive">
                     <LogOut className="h-5 w-5" />
-                    <span>Log Out</span>
+                    <span>Đăng xuất</span>
                 </button>
 
                 <p className="mt-6 text-center text-xs text-muted-foreground">FitTrack v1.0.0</p>
