@@ -1,6 +1,5 @@
-"use client";
-
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import mapDashboardToHealthData from "./utils/statsMapper";
 
 export type ScreenName =
@@ -48,6 +47,7 @@ type AppContextValue = {
     setScreen: (screen: ScreenName) => void;
     userData: UserData | null;
     healthData: HealthData;
+    authFetch: (path: string, opts?: RequestInit) => Promise<Response | null>;
     login: (email: string, password: string) => Promise<boolean>;
     register: (payload: any) => Promise<boolean>;
     logout: () => void;
@@ -60,6 +60,9 @@ type AppContextValue = {
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:5000";
+const TOKEN_KEY = "ft_token";
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
     const [screen, setScreen] = useState<ScreenName>("splash");
@@ -75,8 +78,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         dailyWaterGoal: 2000,
     });
     const [token, setToken] = useState<string | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
-
+    const [loading, setLoading] = useState(false);
     const [healthData, setHealthData] = useState<HealthData>({
         currentWeight: 72,
         targetWeight: 68,
@@ -106,330 +108,374 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ],
     });
 
-    const value = useMemo<AppContextValue>(
-        () => ({
-            screen,
-            setScreen,
-            userData,
-            healthData,
-            loading,
-            login: async (email: string, password: string) => {
-                setLoading(true);
-                try {
-                    const res = await fetch("http://localhost:5000/api/auth/login", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ email, password }),
-                    });
+    async function storeToken(value: string | null) {
+        setToken(value);
+        if (value) {
+            await AsyncStorage.setItem(TOKEN_KEY, value);
+        } else {
+            await AsyncStorage.removeItem(TOKEN_KEY);
+        }
+    }
 
-                    const body = await res.json();
+    function resolveToken(override?: string | null) {
+        return override || token;
+    }
 
-                    if (!res.ok) {
-                        setLoading(false);
-                        return false;
-                    }
-
-                    const t = body.data?.token || body.token;
-                    if (t) {
-                        localStorage.setItem("ft_token", t);
-                        setToken(t);
-                    }
-
-                    // fetch profile and initial health data
-                    const profile = await fetchProfile(t);
-                    await fetchHealth();
-
-                    setLoading(false);
-                    // decide where to redirect based on profile completeness
-                    if (!profile || profile.age === undefined || profile.height === undefined || profile.weight === undefined) {
-                        setScreen("profile");
-                        return true;
-                    }
-
-                    setScreen("dashboard");
-                    return true;
-                } catch (err) {
-                    // eslint-disable-next-line no-console
-                    console.error(err);
-                    setLoading(false);
-                    return false;
-                }
-            },
-            register: async (payload: any) => {
-                setLoading(true);
-                try {
-                    const res = await fetch("http://localhost:5000/api/auth/register", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload),
-                    });
-
-                    const body = await res.json();
-                    if (!res.ok) {
-                        setLoading(false);
-                        return false;
-                    }
-
-                    const t = body.data?.token || body.token;
-                    if (t) {
-                        localStorage.setItem("ft_token", t);
-                        setToken(t);
-                    }
-
-                    const profile = await fetchProfile(t);
-                    await fetchHealth();
-
-                    setLoading(false);
-                    const profileComplete = body.data?.profileComplete;
-                    if (profileComplete === true) {
-                        setScreen("dashboard");
-                        return true;
-                    }
-
-                    if (!profile || profile.age === undefined || profile.height === undefined || profile.weight === undefined) {
-                        setScreen("profile");
-                        return true;
-                    }
-
-                    setScreen("dashboard");
-                    return true;
-                } catch (err) {
-                    // eslint-disable-next-line no-console
-                    console.error(err);
-                    setLoading(false);
-                    return false;
-                }
-            },
-            updateWeight: (weight: number) => {
-                setHealthData((current) => {
-                    const nextWeight = Number(weight.toFixed(1));
-                    const nextBmi = Number((nextWeight / Math.pow(current.currentWeight ? userData!.height / 100 : 1, 2)).toFixed(1));
-
-                    return {
-                        ...current,
-                        currentWeight: nextWeight,
-                        bmi: nextBmi,
-                        weightHistory: [...current.weightHistory.slice(-6), { date: "Now", weight: nextWeight }],
-                    };
-                });
-            },
-            addWater: async (amount: number) => {
-                try {
-                    const res = await fetchWithAuth("/api/water", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ amount }),
-                    });
-
-                    if (!res || !res.ok) {
-                        return;
-                    }
-
-                    // refresh today's intake and history
-                    const todayRes = await fetchWithAuth("/api/water/today");
-                    const histRes = await fetchWithAuth("/api/water/history");
-
-                    const today = todayRes && todayRes.ok ? await todayRes.json() : null;
-                    const hist = histRes && histRes.ok ? await histRes.json() : null;
-
-                    // hist.data.logs expected shape from API: { logs: [...], totalAmount }
-                    const mappedHistory = hist && hist.data && Array.isArray(hist.data.logs)
-                        ? hist.data.logs.map((l: any) => ({ date: l.date || l.createdAt || "", amount: l.amount || l.value || 0 }))
-                        : [...healthData.waterHistory.slice(-6), { date: "Now", amount }];
-
-                    setHealthData((current) => ({
-                        ...current,
-                        waterIntake: (today && today.data && (today.data.totalAmount ?? today.data.amount)) || current.waterIntake + amount,
-                        waterHistory: mappedHistory,
-                    }));
-                } catch (err) {
-                    // eslint-disable-next-line no-console
-                    console.error(err);
-                }
-            },
-            refreshHealth: async () => {
-                await fetchHealth();
-            },
-            logout: () => {
-                localStorage.removeItem("ft_token");
-                setToken(null);
-                setUserData(null);
-                setScreen("login");
-            },
-            postBmi: async (payload: { height: number; weight: number; bmi: number }) => {
-                try {
-                    const res = await fetchWithAuth("/api/bmi", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload),
-                    });
-
-                    if (!res || !res.ok) return false;
-
-                    // refresh health/stats
-                    await fetchHealth();
-                    return true;
-                } catch (err) {
-                    // eslint-disable-next-line no-console
-                    console.error(err);
-                    return false;
-                }
-            },
-            updateProfile: async (payload: Partial<UserData>) => {
-                try {
-                    const res = await fetchWithAuth("/api/users/profile", {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            fullName: payload.name,
-                            age: payload.age,
-                            gender: payload.gender,
-                            height: payload.height,
-                            weight: payload.weight,
-                            activityLevel: payload.activityLevel,
-                            goal: payload.goal,
-                            dailyWaterGoal: payload.dailyWaterGoal,
-                        }),
-                    });
-
-                    if (!res || !res.ok) return false;
-
-                    const body = await res.json();
-                    const updated = body?.data?.user || body?.data || {};
-
-                    setUserData((current) => ({
-                        name: updated.fullName || updated.name || current?.name || "",
-                        email: updated.email || current?.email || "",
-                        age: updated.age ?? current?.age ?? 18,
-                        height: updated.height ?? current?.height ?? 170,
-                        weight: updated.weight ?? current?.weight ?? 70,
-                        gender: updated.gender ?? current?.gender ?? "male",
-                        activityLevel: updated.activityLevel ?? current?.activityLevel ?? "moderate",
-                        goal: updated.goal ?? current?.goal ?? "maintain",
-                        dailyWaterGoal: updated.dailyWaterGoal ?? current?.dailyWaterGoal ?? 2000,
-                    }));
-
-                    if (typeof updated.height === "number" && typeof updated.weight === "number") {
-                        const nextBmi = Number((updated.weight / Math.pow(updated.height / 100, 2)).toFixed(1));
-                        setHealthData((current) => ({
-                            ...current,
-                            currentWeight: updated.weight,
-                            bmi: nextBmi,
-                        }));
-                    }
-
-                    await fetchHealth();
-
-                    return true;
-                } catch (err) {
-                    // eslint-disable-next-line no-console
-                    console.error(err);
-                    return false;
-                }
-            },
-        }),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [healthData, screen, userData],
-    );
-
-    // helper to include auth header
     async function fetchWithAuth(path: string, opts: RequestInit = {}) {
-        const base = "http://localhost:5000";
-        const headers: Record<string, string> = { ...(opts.headers as Record<string, string> || {}) };
-        const t = token || localStorage.getItem("ft_token");
-        if (t) headers["Authorization"] = `Bearer ${t}`;
+        const headers = new Headers(opts.headers ?? {});
+        const authToken = resolveToken();
+
+        if (authToken) {
+            headers.set("Authorization", `Bearer ${authToken}`);
+        }
 
         try {
-            return await fetch(base + path, { ...opts, headers });
-        } catch (err) {
+            return await fetch(`${API_BASE_URL}${path}`, {
+                ...opts,
+                headers,
+            });
+        } catch (error) {
             // eslint-disable-next-line no-console
-            console.error("fetchWithAuth error", err);
+            console.error("fetchWithAuth error", error);
             return null;
         }
     }
 
-    async function fetchProfile(t?: string | null) {
+    async function fetchProfile(overrideToken?: string | null) {
         try {
-            const h: Record<string, string> = {};
-            const tok = t || token || localStorage.getItem("ft_token");
-            if (tok) h["Authorization"] = `Bearer ${tok}`;
+            const headers = new Headers();
+            const authToken = resolveToken(overrideToken);
 
-            const res = await fetch("http://localhost:5000/api/auth/me", { headers: h });
-            if (!res.ok) return;
-            const body = await res.json();
+            if (authToken) {
+                headers.set("Authorization", `Bearer ${authToken}`);
+            }
+
+            const res = await fetch(`${API_BASE_URL}/api/auth/me`, { headers });
+            if (!res.ok) {
+                return null;
+            }
+
+            const body = (await res.json()) as any;
             if (body && body.data) {
                 setUserData({
                     name: body.data.fullName || body.data.name || "",
                     email: body.data.email,
-                    age: body.data.age === undefined ? undefined : body.data.age,
-                    height: body.data.height === undefined ? undefined : body.data.height,
-                    weight: body.data.weight === undefined ? undefined : body.data.weight,
-                    gender: body.data.gender === undefined ? undefined : body.data.gender,
-                    activityLevel: body.data.activityLevel === undefined ? undefined : body.data.activityLevel,
-                    goal: body.data.goal === undefined ? undefined : body.data.goal,
-                    dailyWaterGoal: body.data.dailyWaterGoal === undefined ? undefined : body.data.dailyWaterGoal,
+                    age: body.data.age ?? 18,
+                    height: body.data.height ?? 170,
+                    weight: body.data.weight ?? 70,
+                    gender: body.data.gender ?? "male",
+                    activityLevel: body.data.activityLevel ?? "moderate",
+                    goal: body.data.goal ?? "maintain",
+                    dailyWaterGoal: body.data.dailyWaterGoal ?? 2000,
                 });
+
                 return body.data;
             }
+
             return null;
-        } catch (err) {
+        } catch (error) {
             // eslint-disable-next-line no-console
-            console.error(err);
+            console.error(error);
             return null;
         }
     }
 
     async function fetchHealth() {
         try {
-            // attempt to load dashboard and water today
             const dash = await fetchWithAuth("/api/stats/dashboard");
             const today = await fetchWithAuth("/api/water/today");
 
             if (dash && dash.ok) {
-                const data = await dash.json();
-                // dashboard structure: data.data = { bmi: {...}, calories: {...}, water: {...}, ... }
-                const dd = data.data || {};
+                const data = (await dash.json()) as any;
+                const dashboard = data.data || {};
 
-                // Use central mapper to convert dashboard -> frontend health fields
                 setHealthData((current) => ({
                     ...current,
-                    ...mapDashboardToHealthData(dd, current),
+                    ...mapDashboardToHealthData(dashboard, current),
                 }));
             }
 
             if (today && today.ok) {
-                const td = await today.json();
-                setHealthData((current) => ({ ...current, waterIntake: td.data?.amount ?? current.waterIntake }));
+                const data = (await today.json()) as any;
+                setHealthData((current) => ({
+                    ...current,
+                    waterIntake: data.data?.totalAmount ?? data.data?.amount ?? current.waterIntake,
+                }));
             }
-        } catch (err) {
+        } catch (error) {
             // eslint-disable-next-line no-console
-            console.error(err);
+            console.error(error);
         }
     }
 
-    // on mount try to restore token and profile
-    useEffect(() => {
-        const t = localStorage.getItem("ft_token");
-        if (t) {
-            setToken(t);
-            fetchProfile(t);
-            fetchHealth();
+    async function login(email: string, password: string) {
+        setLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const body = (await res.json()) as any;
+            if (!res.ok) {
+                return false;
+            }
+
+            const nextToken = body.data?.token || body.token;
+            if (nextToken) {
+                await storeToken(nextToken);
+            }
+
+            const profile = await fetchProfile(nextToken);
+            await fetchHealth();
+
+            if (!profile || profile.age === undefined || profile.height === undefined || profile.weight === undefined) {
+                setScreen("profile");
+            } else {
+                setScreen("dashboard");
+            }
+
+            return true;
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(error);
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function register(payload: any) {
+        setLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            const body = (await res.json()) as any;
+            if (!res.ok) {
+                return false;
+            }
+
+            const nextToken = body.data?.token || body.token;
+            if (nextToken) {
+                await storeToken(nextToken);
+            }
+
+            const profile = await fetchProfile(nextToken);
+            await fetchHealth();
+
+            if (body.data?.profileComplete === true) {
+                setScreen("dashboard");
+                return true;
+            }
+
+            if (!profile || profile.age === undefined || profile.height === undefined || profile.weight === undefined) {
+                setScreen("profile");
+                return true;
+            }
+
             setScreen("dashboard");
-        } else {
+            return true;
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(error);
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function updateWeight(weight: number) {
+        setHealthData((current) => {
+            const nextWeight = Number(weight.toFixed(1));
+            const heightMeters = Math.max(1, (userData?.height ?? 170) / 100);
+            const nextBmi = Number((nextWeight / (heightMeters * heightMeters)).toFixed(1));
+
+            return {
+                ...current,
+                currentWeight: nextWeight,
+                bmi: nextBmi,
+                weightHistory: [...current.weightHistory.slice(-6), { date: "Now", weight: nextWeight }],
+            };
+        });
+    }
+
+    async function addWater(amount: number) {
+        try {
+            const res = await fetchWithAuth("/api/water", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ amount }),
+            });
+
+            if (!res || !res.ok) {
+                return;
+            }
+
+            const todayRes = await fetchWithAuth("/api/water/today");
+            const histRes = await fetchWithAuth("/api/water/history");
+
+            const today = (todayRes && todayRes.ok ? await todayRes.json() : null) as any;
+            const hist = (histRes && histRes.ok ? await histRes.json() : null) as any;
+
+            const mappedHistory = hist && hist.data && Array.isArray(hist.data.logs)
+                ? hist.data.logs.map((item: any) => ({ date: item.date || item.createdAt || "", amount: item.amount || item.value || 0 }))
+                : [...healthData.waterHistory.slice(-6), { date: "Now", amount }];
+
+            setHealthData((current) => ({
+                ...current,
+                waterIntake: (today && today.data && (today.data.totalAmount ?? today.data.amount)) || current.waterIntake + amount,
+                waterHistory: mappedHistory,
+            }));
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(error);
+        }
+    }
+
+    async function postBmi(payload: { height: number; weight: number; bmi: number }) {
+        try {
+            const res = await fetchWithAuth("/api/bmi", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res || !res.ok) {
+                return false;
+            }
+
+            await fetchHealth();
+            return true;
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(error);
+            return false;
+        }
+    }
+
+    async function updateProfile(payload: Partial<UserData>) {
+        try {
+            const res = await fetchWithAuth("/api/users/profile", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    fullName: payload.name,
+                    age: payload.age,
+                    gender: payload.gender,
+                    height: payload.height,
+                    weight: payload.weight,
+                    activityLevel: payload.activityLevel,
+                    goal: payload.goal,
+                    dailyWaterGoal: payload.dailyWaterGoal,
+                }),
+            });
+
+            if (!res || !res.ok) {
+                return false;
+            }
+
+            const body: any = await res.json();
+            const updated = body?.data?.user || body?.data || {};
+
+            setUserData((current) => ({
+                name: updated.fullName || updated.name || current?.name || "",
+                email: updated.email || current?.email || "",
+                age: updated.age ?? current?.age ?? 18,
+                height: updated.height ?? current?.height ?? 170,
+                weight: updated.weight ?? current?.weight ?? 70,
+                gender: updated.gender ?? current?.gender ?? "male",
+                activityLevel: updated.activityLevel ?? current?.activityLevel ?? "moderate",
+                goal: updated.goal ?? current?.goal ?? "maintain",
+                dailyWaterGoal: updated.dailyWaterGoal ?? current?.dailyWaterGoal ?? 2000,
+            }));
+
+            if (typeof updated.height === "number" && typeof updated.weight === "number") {
+                const nextBmi = Number((updated.weight / Math.pow(updated.height / 100, 2)).toFixed(1));
+                setHealthData((current) => ({
+                    ...current,
+                    currentWeight: updated.weight,
+                    bmi: nextBmi,
+                }));
+            }
+
+            await fetchHealth();
+            return true;
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(error);
+            return false;
+        }
+    }
+
+    async function refreshHealth() {
+        await fetchHealth();
+    }
+
+    function logout() {
+        void AsyncStorage.removeItem(TOKEN_KEY);
+        setToken(null);
+        setUserData(null);
+        setScreen("login");
+    }
+
+    useEffect(() => {
+        let mounted = true;
+
+        async function restoreSession() {
+            const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+
+            if (!mounted) {
+                return;
+            }
+
+            if (storedToken) {
+                setToken(storedToken);
+                await fetchProfile(storedToken);
+                await fetchHealth();
+                setScreen("dashboard");
+                return;
+            }
+
             setScreen("login");
         }
+
+        void restoreSession();
+
+        return () => {
+            mounted = false;
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    const value: AppContextValue = {
+        screen,
+        setScreen,
+        userData,
+        healthData,
+        authFetch: fetchWithAuth,
+        loading,
+        login,
+        register,
+        logout,
+        postBmi,
+        updateProfile,
+        updateWeight,
+        addWater,
+        refreshHealth,
+    };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 export function useApp() {
     const context = useContext(AppContext);
-
     if (!context) {
         throw new Error("useApp must be used within AppProvider");
     }
-
     return context;
 }

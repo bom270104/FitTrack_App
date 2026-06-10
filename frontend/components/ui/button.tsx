@@ -1,24 +1,81 @@
-import * as React from "react";
+import React from "react";
+import { Pressable, StyleSheet, Text, View, type PressableProps, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 
-import { cn } from "@/lib/utils";
+type ButtonVariant = "default" | "outline";
 
-export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant?: "default" | "outline";
+export type ButtonProps = PressableProps & {
+    variant?: ButtonVariant;
+    title?: string;
+    style?: StyleProp<ViewStyle>;
+    textStyle?: StyleProp<TextStyle>;
+    contentStyle?: StyleProp<ViewStyle>;
+    children?: React.ReactNode;
 };
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-    ({ className, variant = "default", ...props }, ref) => {
-        const base =
-            "inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
-        const variants = {
-            default: "bg-primary text-primary-foreground hover:bg-primary/90",
-            outline: "border border-border bg-card text-foreground hover:bg-muted",
-        } as const;
+export function Button({ variant = "default", title, style, textStyle, contentStyle, children, disabled, ...props }: ButtonProps) {
+    return (
+        <Pressable
+            accessibilityRole="button"
+            disabled={disabled}
+            style={({ pressed }) => [
+                styles.base,
+                variant === "outline" ? styles.outline : styles.default,
+                pressed && !disabled ? styles.pressed : null,
+                disabled ? styles.disabled : null,
+                style,
+            ]}
+            {...props}
+        >
+            <View style={[styles.content, contentStyle]}>
+                {title ? (
+                    <Text style={[styles.title, variant === "outline" ? styles.outlineTitle : styles.defaultTitle, textStyle]}>{title}</Text>
+                ) : React.isValidElement(children) || Array.isArray(children) ? (
+                    children
+                ) : typeof children === "string" || typeof children === "number" ? (
+                    <Text style={[styles.title, variant === "outline" ? styles.outlineTitle : styles.defaultTitle, textStyle]}>{children}</Text>
+                ) : null}
+            </View>
+        </Pressable>
+    );
+}
 
-        return <button ref={ref} className={cn(base, variants[variant], className)} {...props} />;
+const styles = StyleSheet.create({
+    base: {
+        minHeight: 48,
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 16,
     },
-);
-
-Button.displayName = "Button";
-
-export { Button };
+    content: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+    },
+    default: {
+        backgroundColor: "#0F766E",
+    },
+    outline: {
+        borderWidth: 1,
+        borderColor: "rgba(15, 23, 42, 0.12)",
+        backgroundColor: "white",
+    },
+    title: {
+        fontSize: 15,
+        fontWeight: "600",
+    },
+    defaultTitle: {
+        color: "white",
+    },
+    outlineTitle: {
+        color: "#0F172A",
+    },
+    pressed: {
+        opacity: 0.9,
+        transform: [{ scale: 0.99 }],
+    },
+    disabled: {
+        opacity: 0.5,
+    },
+});

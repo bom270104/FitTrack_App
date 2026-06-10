@@ -1,11 +1,11 @@
-"use client";
-
-import { useState } from "react";
+import React, { useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useApp } from "../app-context";
 import { BottomNav } from "../bottom-nav";
-import { ArrowLeft, Target, Plus, Check, Flame, Droplets, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { colors, shadow } from "../theme";
 
 interface Goal {
     id: string;
@@ -14,7 +14,8 @@ interface Goal {
     current: number;
     max: number;
     unit: string;
-    icon: typeof Target;
+    icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    tint: string;
     color: string;
     completed: boolean;
 }
@@ -22,39 +23,9 @@ interface Goal {
 export function GoalsScreen() {
     const { healthData, setScreen } = useApp();
     const [goals, setGoals] = useState<Goal[]>([
-        {
-            id: "1",
-            title: "Target Weight",
-            target: "68 kg",
-            current: 72,
-            max: 72,
-            unit: "kg",
-            icon: Scale,
-            color: "bg-primary text-primary",
-            completed: false,
-        },
-        {
-            id: "2",
-            title: "Daily Water",
-            target: "2,500 ml",
-            current: healthData.waterIntake,
-            max: healthData.waterGoal,
-            unit: "ml",
-            icon: Droplets,
-            color: "bg-secondary text-secondary",
-            completed: healthData.waterIntake >= healthData.waterGoal,
-        },
-        {
-            id: "3",
-            title: "Calorie Budget",
-            target: "2,200 kcal",
-            current: healthData.dailyCalories,
-            max: healthData.calorieGoal,
-            unit: "kcal",
-            icon: Flame,
-            color: "bg-accent text-accent",
-            completed: healthData.dailyCalories <= healthData.calorieGoal,
-        },
+        { id: "1", title: "Target Weight", target: "68 kg", current: 72, max: 72, unit: "kg", icon: "scale-balance", tint: colors.primarySoft, color: colors.primary, completed: false },
+        { id: "2", title: "Daily Water", target: "2,500 ml", current: healthData.waterIntake, max: healthData.waterGoal, unit: "ml", icon: "water-outline", tint: colors.secondarySoft, color: colors.secondary, completed: healthData.waterIntake >= healthData.waterGoal },
+        { id: "3", title: "Calorie Budget", target: "2,200 kcal", current: healthData.dailyCalories, max: healthData.calorieGoal, unit: "kcal", icon: "fire", tint: colors.accentSoft, color: colors.accent, completed: healthData.dailyCalories <= healthData.calorieGoal },
     ]);
 
     const [showAddGoal, setShowAddGoal] = useState(false);
@@ -63,124 +34,353 @@ export function GoalsScreen() {
     const addGoal = () => {
         if (!newGoal.title.trim() || !newGoal.target.trim()) return;
 
-        const nextGoal: Goal = {
-            id: String(Date.now()),
-            title: newGoal.title.trim(),
-            target: newGoal.target.trim(),
-            current: 0,
-            max: 1,
-            unit: newGoal.unit,
-            icon: Target,
-            color: "bg-primary text-primary",
-            completed: false,
-        };
-
-        setGoals((current) => [nextGoal, ...current]);
+        setGoals((current) => [
+            {
+                id: String(Date.now()),
+                title: newGoal.title.trim(),
+                target: newGoal.target.trim(),
+                current: 0,
+                max: 1,
+                unit: newGoal.unit,
+                icon: "target",
+                tint: colors.primarySoft,
+                color: colors.primary,
+                completed: false,
+            },
+            ...current,
+        ]);
         setNewGoal({ title: "", target: "", unit: "kg" });
         setShowAddGoal(false);
     };
 
     return (
-        <div className="flex h-full flex-col bg-background">
-            <div className="px-5 pb-4 pt-14">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setScreen("dashboard")} className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                            <ArrowLeft className="h-5 w-5 text-foreground" />
-                        </button>
-                        <h1 className="text-xl font-bold text-foreground">Mục tiêu</h1>
-                    </div>
-                    <button onClick={() => setShowAddGoal(!showAddGoal)} className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-                        <Plus className="h-5 w-5 text-primary-foreground" />
-                    </button>
-                </div>
-            </div>
+        <View style={styles.root}>
+            <View style={styles.header}>
+                <View style={styles.headerLeft}>
+                    <Pressable onPress={() => setScreen("dashboard")} style={styles.backButton}>
+                        <MaterialCommunityIcons name="arrow-left" size={22} color={colors.foreground} />
+                    </Pressable>
+                    <Text style={styles.headerTitle}>Mục tiêu</Text>
+                </View>
+                <Pressable onPress={() => setShowAddGoal((current) => !current)} style={styles.addButton}>
+                    <MaterialCommunityIcons name="plus" size={22} color="#FFFFFF" />
+                </Pressable>
+            </View>
 
-            <div className="flex-1 overflow-y-auto px-5 pb-28">
-                <div className="mb-6 rounded-3xl bg-gradient-to-br from-primary to-secondary p-6">
-                    <div className="mb-4 flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-primary-foreground/80">Tiến độ tuần</p>
-                            <p className="mt-1 text-3xl font-bold text-primary-foreground">78%</p>
-                        </div>
-                        <div className="relative h-16 w-16">
-                            <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
-                                <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
-                                <circle cx="18" cy="18" r="15.5" fill="none" stroke="white" strokeWidth="3" strokeDasharray={`${78 * 0.97} 100`} strokeLinecap="round" />
-                            </svg>
-                            <Target className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-primary-foreground" />
-                        </div>
-                    </div>
-                    <p className="text-sm text-primary-foreground/80">Bạn đang làm tốt! Hãy tiếp tục để đạt được mục tiêu.</p>
-                </div>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <View style={styles.hero}>
+                    <View style={styles.heroTop}>
+                        <View>
+                            <Text style={styles.heroLabel}>Tiến độ tuần</Text>
+                            <Text style={styles.heroValue}>78%</Text>
+                        </View>
+                        <View style={styles.circularProgress}>
+                            <View style={styles.circularTrack} />
+                            <View style={styles.circularCenter}>
+                                <MaterialCommunityIcons name="target" size={24} color="#FFFFFF" />
+                            </View>
+                        </View>
+                    </View>
+                    <Text style={styles.heroCopy}>Bạn đang làm tốt! Hãy tiếp tục để đạt được mục tiêu.</Text>
+                </View>
 
-                {showAddGoal && (
-                    <div className="mb-4 animate-in slide-in-from-top-2 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                        <h3 className="mb-4 text-sm font-semibold text-foreground">Thêm mục tiêu mới</h3>
-                        <div className="space-y-3">
-                            <Input value={newGoal.title} onChange={(e) => setNewGoal((current) => ({ ...current, title: e.target.value }))} placeholder="Tiêu đề mục tiêu" className="h-12 rounded-xl border-0 bg-muted" />
-                            <Input value={newGoal.target} onChange={(e) => setNewGoal((current) => ({ ...current, target: e.target.value }))} placeholder="Giá trị mục tiêu" className="h-12 rounded-xl border-0 bg-muted" />
-                            <div className="flex gap-2">
-                                <Button type="button" variant={newGoal.unit === "kg" ? "default" : "outline"} onClick={() => setNewGoal((current) => ({ ...current, unit: "kg" }))} className="h-10 flex-1 rounded-xl">
-                                    kg
-                                </Button>
-                                <Button type="button" variant={newGoal.unit === "ml" ? "default" : "outline"} onClick={() => setNewGoal((current) => ({ ...current, unit: "ml" }))} className="h-10 flex-1 rounded-xl">
-                                    ml
-                                </Button>
-                                <Button type="button" variant={newGoal.unit === "kcal" ? "default" : "outline"} onClick={() => setNewGoal((current) => ({ ...current, unit: "kcal" }))} className="h-10 flex-1 rounded-xl">
-                                    kcal
-                                </Button>
-                            </div>
-                            <div className="flex gap-3">
-                                <Button variant="outline" onClick={() => setShowAddGoal(false)} className="h-12 flex-1 rounded-xl">Hủy</Button>
-                                <Button onClick={addGoal} className="h-12 flex-1 rounded-xl bg-primary text-primary-foreground">Thêm mục tiêu</Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <Modal visible={showAddGoal} transparent animationType="fade" onRequestClose={() => setShowAddGoal(false)}>
+                    <View style={styles.modalBackdrop}>
+                        <View style={styles.modalCard}>
+                            <Text style={styles.modalTitle}>Thêm mục tiêu mới</Text>
+                            <View style={styles.modalFields}>
+                                <Input value={newGoal.title} onChangeText={(text) => setNewGoal((current) => ({ ...current, title: text }))} placeholder="Tiêu đề mục tiêu" />
+                                <Input value={newGoal.target} onChangeText={(text) => setNewGoal((current) => ({ ...current, target: text }))} placeholder="Giá trị mục tiêu" />
+                                <View style={styles.unitRow}>
+                                    {(["kg", "ml", "kcal"] as const).map((unit) => {
+                                        const active = newGoal.unit === unit;
+                                        return (
+                                            <Pressable key={unit} onPress={() => setNewGoal((current) => ({ ...current, unit }))} style={[styles.unitPill, active && styles.unitPillActive]}>
+                                                <Text style={[styles.unitText, active && styles.unitTextActive]}>{unit}</Text>
+                                            </Pressable>
+                                        );
+                                    })}
+                                </View>
+                                <View style={styles.modalActions}>
+                                    <Button variant="outline" onPress={() => setShowAddGoal(false)} title="Hủy" style={styles.actionButton} />
+                                    <Button onPress={addGoal} title="Thêm mục tiêu" style={styles.actionButtonPrimary} />
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
 
-                <div className="space-y-3">
+                <View style={styles.goalList}>
                     {goals.map((goal) => {
                         const progress = Math.round((goal.current / goal.max) * 100);
                         return (
-                            <div key={goal.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                                <div className="flex items-start gap-4">
-                                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${goal.color.replace("text-", "bg-")}/10`}>
-                                        <goal.icon className={`h-6 w-6 ${goal.color.split(" ")[1]}`} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="mb-1 flex items-center justify-between">
-                                            <h3 className="font-semibold text-foreground">{goal.title}</h3>
-                                            {goal.completed && (
-                                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary">
-                                                    <Check className="h-4 w-4 text-primary-foreground" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <p className="mb-3 text-sm text-muted-foreground">Mục tiêu: {goal.target}</p>
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-xs">
-                                                <span className="text-muted-foreground">{goal.current} / {goal.max} {goal.unit}</span>
-                                                <span className={goal.completed ? "font-semibold text-primary" : "text-muted-foreground"}>{progress}%</span>
-                                            </div>
-                                            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                                                <div className={`h-full rounded-full transition-all ${goal.completed ? "bg-primary" : goal.color.split(" ")[0].replace("bg-", "bg-")}`} style={{ width: `${Math.min(progress, 100)}%` }} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <View key={goal.id} style={styles.goalCard}>
+                                <View style={styles.goalRow}>
+                                    <View style={[styles.goalIcon, { backgroundColor: goal.tint }]}>
+                                        <MaterialCommunityIcons name={goal.icon} size={22} color={goal.color} />
+                                    </View>
+                                    <View style={styles.goalBody}>
+                                        <View style={styles.goalTitleRow}>
+                                            <Text style={styles.goalTitle}>{goal.title}</Text>
+                                            {goal.completed ? <View style={styles.checkBadge}><MaterialCommunityIcons name="check" size={16} color="#FFFFFF" /></View> : null}
+                                        </View>
+                                        <Text style={styles.goalTarget}>Mục tiêu: {goal.target}</Text>
+                                        <View style={styles.progressMeta}>
+                                            <Text style={styles.progressMetaText}>{goal.current} / {goal.max} {goal.unit}</Text>
+                                            <Text style={[styles.progressMetaText, goal.completed && styles.progressDone]}>{progress}%</Text>
+                                        </View>
+                                        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.min(progress, 100)}%`, backgroundColor: goal.color }]} /></View>
+                                    </View>
+                                </View>
+                            </View>
                         );
                     })}
-                </div>
+                </View>
 
-                <div className="mt-4 rounded-2xl bg-muted p-5">
-                    <p className="text-center text-sm font-medium text-foreground">&quot;Bài tập tệ nhất là bài tập bạn không làm.&quot;</p>
-                    <p className="mt-2 text-center text-xs text-muted-foreground">Giữ động lực nhé!</p>
-                </div>
-            </div>
+                <View style={styles.quoteCard}>
+                    <Text style={styles.quoteText}>"Bài tập tệ nhất là bài tập bạn không làm."</Text>
+                    <Text style={styles.quoteSub}>Giữ động lực nhé!</Text>
+                </View>
+            </ScrollView>
 
             <BottomNav />
-        </div>
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    root: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+    header: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 12,
+    },
+    headerLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: colors.mutedSoft,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    addButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    content: {
+        paddingHorizontal: 20,
+        paddingBottom: 124,
+        gap: 16,
+    },
+    hero: {
+        borderRadius: 28,
+        backgroundColor: colors.primary,
+        padding: 20,
+    },
+    heroTop: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+    heroLabel: {
+        fontSize: 13,
+        color: "rgba(255,255,255,0.82)",
+    },
+    heroValue: {
+        marginTop: 6,
+        fontSize: 34,
+        fontWeight: "800",
+        color: "#FFFFFF",
+    },
+    circularProgress: {
+        width: 68,
+        height: 68,
+        borderRadius: 34,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(255,255,255,0.08)",
+    },
+    circularTrack: {
+        position: "absolute",
+        width: 68,
+        height: 68,
+        borderRadius: 34,
+        borderWidth: 4,
+        borderColor: "rgba(255,255,255,0.24)",
+    },
+    circularCenter: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    heroCopy: {
+        fontSize: 13,
+        color: "rgba(255,255,255,0.82)",
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: "rgba(15,23,42,0.42)",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+    },
+    modalCard: {
+        width: "100%",
+        borderRadius: 24,
+        backgroundColor: colors.card,
+        padding: 18,
+        ...shadow,
+    },
+    modalTitle: {
+        fontSize: 16,
+        fontWeight: "800",
+        color: colors.foreground,
+        marginBottom: 14,
+    },
+    modalFields: {
+        gap: 12,
+    },
+    unitRow: {
+        flexDirection: "row",
+        gap: 8,
+    },
+    unitPill: {
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 14,
+        backgroundColor: colors.mutedSoft,
+        alignItems: "center",
+    },
+    unitPillActive: {
+        backgroundColor: colors.primarySoft,
+    },
+    unitText: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: colors.foreground,
+    },
+    unitTextActive: {
+        color: colors.primary,
+    },
+    modalActions: {
+        flexDirection: "row",
+        gap: 10,
+        marginTop: 4,
+    },
+    actionButton: {
+        flex: 1,
+    },
+    actionButtonPrimary: {
+        flex: 1,
+    },
+    goalList: {
+        gap: 12,
+    },
+    goalCard: {
+        borderRadius: 22,
+        backgroundColor: colors.card,
+        padding: 16,
+        ...shadow,
+    },
+    goalRow: {
+        flexDirection: "row",
+        gap: 14,
+    },
+    goalIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    goalBody: {
+        flex: 1,
+    },
+    goalTitleRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    goalTitle: {
+        fontSize: 15,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    checkBadge: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    goalTarget: {
+        marginTop: 4,
+        marginBottom: 10,
+        fontSize: 13,
+        color: colors.muted,
+    },
+    progressMeta: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 8,
+    },
+    progressMetaText: {
+        fontSize: 11,
+        color: colors.muted,
+    },
+    progressDone: {
+        color: colors.primary,
+        fontWeight: "700",
+    },
+    progressTrack: {
+        height: 8,
+        borderRadius: 999,
+        overflow: "hidden",
+        backgroundColor: "#E2E8F0",
+    },
+    progressFill: {
+        height: "100%",
+        borderRadius: 999,
+    },
+    quoteCard: {
+        borderRadius: 22,
+        backgroundColor: colors.mutedSoft,
+        padding: 18,
+        alignItems: "center",
+    },
+    quoteText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: colors.foreground,
+        textAlign: "center",
+    },
+    quoteSub: {
+        marginTop: 8,
+        fontSize: 12,
+        color: colors.muted,
+    },
+});
