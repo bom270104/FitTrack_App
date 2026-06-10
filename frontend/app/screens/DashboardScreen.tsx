@@ -16,10 +16,14 @@ export function DashboardScreen() {
         return fallback;
     };
 
-    const waterPercentage = Math.round((asNumber(healthData.waterIntake) / asNumber(healthData.waterGoal)) * 100);
-    const caloriePercentage = Math.round((asNumber(healthData.dailyCalories) / asNumber(healthData.calorieGoal)) * 100);
+    const hasBmi = asNumber(healthData.bmi) > 0;
+    const hasCalories = asNumber(healthData.calorieGoal) > 0 || asNumber(healthData.dailyCalories) > 0 || asNumber(healthData.tdee) > 0;
+    const hasWater = asNumber(healthData.waterGoal) > 0 || asNumber(healthData.waterIntake) > 0;
+    const hasWeightGoal = asNumber(userData?.weight) > 0 && asNumber(healthData.targetWeight) > 0;
+    const waterPercentage = hasWater && asNumber(healthData.waterGoal) > 0 ? Math.round((asNumber(healthData.waterIntake) / asNumber(healthData.waterGoal)) * 100) : 0;
+    const caloriePercentage = hasCalories && asNumber(healthData.calorieGoal) > 0 ? Math.round((asNumber(healthData.dailyCalories) / asNumber(healthData.calorieGoal)) * 100) : 0;
     const userWeightNum = asNumber(userData?.weight);
-    const weightProgress = Math.round(((userWeightNum - asNumber(healthData.currentWeight)) / Math.max(1, userWeightNum - asNumber(healthData.targetWeight))) * 100);
+    const weightProgress = hasWeightGoal ? Math.round(((userWeightNum - asNumber(healthData.currentWeight)) / Math.max(1, userWeightNum - asNumber(healthData.targetWeight))) * 100) : 0;
 
     return (
         <View style={styles.root}>
@@ -41,7 +45,7 @@ export function DashboardScreen() {
                             <View>
                                 <Text style={styles.heroLabel}>BMI của bạn</Text>
                                 <View style={styles.heroValueRow}>
-                                    <Text style={styles.heroValue}>{String(healthData.bmi)}</Text>
+                                    <Text style={styles.heroValue}>{hasBmi ? String(healthData.bmi) : "-"}</Text>
                                     <Text style={styles.heroUnit}>kg/m2</Text>
                                 </View>
                             </View>
@@ -50,7 +54,7 @@ export function DashboardScreen() {
                             </View>
                         </View>
                         <View style={styles.heroFooter}>
-                            <Text style={styles.heroPill}>Bình thường</Text>
+                            <Text style={styles.heroPill}>{hasBmi ? "Bình thường" : "Chưa có dữ liệu"}</Text>
                             <MaterialCommunityIcons name="chevron-right" size={22} color="rgba(255,255,255,0.8)" style={styles.heroChevron} />
                         </View>
                     </LinearGradient>
@@ -64,8 +68,8 @@ export function DashboardScreen() {
                             </View>
                             <Text style={styles.metricTag}>Calo</Text>
                         </View>
-                        <Text style={styles.metricValue}>{String(healthData.dailyCalories)}</Text>
-                        <Text style={styles.metricSub}>/ {String(healthData.calorieGoal)}</Text>
+                        <Text style={styles.metricValue}>{hasCalories ? String(healthData.dailyCalories) : "-"}</Text>
+                        <Text style={styles.metricSub}>{hasCalories ? `/ ${String(healthData.calorieGoal)}` : "Chưa có dữ liệu"}</Text>
                         <View style={styles.progressTrack}>
                             <View style={[styles.progressFill, { width: `${Math.min(caloriePercentage, 100)}%`, backgroundColor: colors.accent }]} />
                         </View>
@@ -78,8 +82,8 @@ export function DashboardScreen() {
                             </View>
                             <Text style={styles.metricTag}>Nước</Text>
                         </View>
-                        <Text style={styles.metricValue}>{String(healthData.waterIntake)}</Text>
-                        <Text style={styles.metricSub}>/ {String(healthData.waterGoal)} ml</Text>
+                        <Text style={styles.metricValue}>{hasWater ? String(healthData.waterIntake) : "-"}</Text>
+                        <Text style={styles.metricSub}>{hasWater ? `/ ${String(healthData.waterGoal)} ml` : "Chưa có dữ liệu"}</Text>
                         <View style={styles.progressTrack}>
                             <View style={[styles.progressFill, { width: `${Math.min(waterPercentage, 100)}%`, backgroundColor: colors.secondary }]} />
                         </View>
@@ -94,7 +98,7 @@ export function DashboardScreen() {
                             </View>
                             <View>
                                 <Text style={styles.goalTitle}>Mục tiêu cân nặng</Text>
-                                <Text style={styles.goalSubtitle}>{String(userData?.weight ?? "-")}kg → {String(healthData.targetWeight)}kg</Text>
+                                <Text style={styles.goalSubtitle}>{hasWeightGoal ? `${String(userData?.weight)}kg → ${String(healthData.targetWeight)}kg` : "Chưa có dữ liệu"}</Text>
                             </View>
                         </View>
                         <MaterialCommunityIcons name="chevron-right" size={24} color={colors.muted} />
@@ -112,12 +116,12 @@ export function DashboardScreen() {
                     <Text style={styles.sectionTitle}>Năng lượng tiêu thụ hàng ngày</Text>
                     <View style={styles.energyRow}>
                         <View>
-                            <Text style={styles.energyValue}>{String(healthData.tdee)}</Text>
+                            <Text style={styles.energyValue}>{hasCalories ? String(healthData.tdee) : "-"}</Text>
                             <Text style={styles.energySub}>kcal/ngày (TDEE)</Text>
                         </View>
                         <View style={styles.energyRight}>
-                            <Text style={styles.energyRightValue}>-200 cal</Text>
-                            <Text style={styles.energyRightSub}>thâm hụt để giảm cân</Text>
+                            <Text style={styles.energyRightValue}>{hasCalories ? "-200 cal" : "-"}</Text>
+                            <Text style={styles.energyRightSub}>{hasCalories ? "thâm hụt để giảm cân" : "Chưa có dữ liệu"}</Text>
                         </View>
                     </View>
                     <Pressable onPress={() => setScreen("calories")} style={styles.tdeeButton}>

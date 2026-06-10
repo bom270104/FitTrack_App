@@ -16,8 +16,9 @@ const waterOptions = [
 export function WaterTrackerScreen() {
     const { healthData, addWater, setScreen } = useApp();
 
-    const percentage = Math.round((healthData.waterIntake / healthData.waterGoal) * 100);
-    const remaining = Math.max(0, healthData.waterGoal - healthData.waterIntake);
+    const hasWaterGoal = healthData.waterGoal > 0;
+    const percentage = hasWaterGoal ? Math.round((healthData.waterIntake / healthData.waterGoal) * 100) : 0;
+    const remaining = hasWaterGoal ? Math.max(0, healthData.waterGoal - healthData.waterIntake) : 0;
     const waterLevel = Math.min(percentage, 100);
     const logs = Array.isArray(healthData.waterHistory) ? healthData.waterHistory : [];
 
@@ -44,17 +45,17 @@ export function WaterTrackerScreen() {
                         <MaterialCommunityIcons name="water-outline" size={34} color={colors.secondary} style={styles.bottleIcon} />
                     </View>
 
-                    <Text style={styles.amount}>{healthData.waterIntake}ml</Text>
-                    <Text style={styles.subtitle}>trong mục tiêu hàng ngày {healthData.waterGoal}ml</Text>
+                    <Text style={styles.amount}>{hasWaterGoal || healthData.waterIntake > 0 ? `${healthData.waterIntake}ml` : "-"}</Text>
+                    <Text style={styles.subtitle}>{hasWaterGoal ? `trong mục tiêu hàng ngày ${healthData.waterGoal}ml` : "Chưa có mục tiêu nước"}</Text>
 
                     <View style={styles.summaryRow}>
                         <View style={styles.summaryItem}>
                             <View style={[styles.summaryDot, { backgroundColor: colors.secondary }]} />
-                            <Text style={styles.summaryText}>{percentage}% hoàn thành</Text>
+                            <Text style={styles.summaryText}>{hasWaterGoal ? `${percentage}% hoàn thành` : "Chưa có dữ liệu"}</Text>
                         </View>
                         <View style={styles.summaryItem}>
                             <View style={[styles.summaryDot, { backgroundColor: colors.muted }]} />
-                            <Text style={styles.summarySecondary}>{remaining}ml còn lại</Text>
+                            <Text style={styles.summarySecondary}>{hasWaterGoal ? `${remaining}ml còn lại` : "-"}</Text>
                         </View>
                     </View>
                 </View>

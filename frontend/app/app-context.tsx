@@ -20,13 +20,13 @@ type WaterPoint = { date: string; amount: number };
 type UserData = {
     name: string;
     email: string;
-    age: number;
-    height: number;
-    weight: number;
-    gender: string;
-    activityLevel: string;
-    goal: string;
-    dailyWaterGoal: number;
+    age?: number;
+    height?: number;
+    weight?: number;
+    gender?: string;
+    activityLevel?: string;
+    goal?: string;
+    dailyWaterGoal?: number;
 };
 
 type HealthData = {
@@ -64,48 +64,40 @@ const AppContext = createContext<AppContextValue | null>(null);
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:5000";
 const TOKEN_KEY = "ft_token";
 
+function isFiniteNumber(value: unknown): value is number {
+    return typeof value === "number" && Number.isFinite(value);
+}
+
+function normalizeUser(user: any): UserData {
+    return {
+        name: user.fullName || user.name || "",
+        email: user.email || "",
+        age: isFiniteNumber(user.age) ? user.age : undefined,
+        height: isFiniteNumber(user.height) ? user.height : undefined,
+        weight: isFiniteNumber(user.weight) ? user.weight : undefined,
+        gender: user.gender,
+        activityLevel: user.activityLevel,
+        goal: user.goal,
+        dailyWaterGoal: isFiniteNumber(user.dailyWaterGoal) ? user.dailyWaterGoal : undefined,
+    };
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
     const [screen, setScreen] = useState<ScreenName>("splash");
-    const [userData, setUserData] = useState<UserData | null>({
-        name: "Nguyen Van A",
-        email: "nguyenvana@example.com",
-        age: 21,
-        height: 175,
-        weight: 72,
-        gender: "male",
-        activityLevel: "moderate",
-        goal: "maintain",
-        dailyWaterGoal: 2000,
-    });
+    const [userData, setUserData] = useState<UserData | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [healthData, setHealthData] = useState<HealthData>({
-        currentWeight: 72,
-        targetWeight: 68,
-        bmi: 23.5,
-        tdee: 2200,
-        calorieGoal: 1800,
-        dailyCalories: 1650,
-        waterIntake: 1250,
-        waterGoal: 2000,
-        weightHistory: [
-            { date: "Mon", weight: 73.2 },
-            { date: "Tue", weight: 72.8 },
-            { date: "Wed", weight: 72.6 },
-            { date: "Thu", weight: 72.2 },
-            { date: "Fri", weight: 72.0 },
-            { date: "Sat", weight: 71.8 },
-            { date: "Sun", weight: 72.0 },
-        ],
-        waterHistory: [
-            { date: "Mon", amount: 1600 },
-            { date: "Tue", amount: 1800 },
-            { date: "Wed", amount: 2100 },
-            { date: "Thu", amount: 1750 },
-            { date: "Fri", amount: 1900 },
-            { date: "Sat", amount: 2200 },
-            { date: "Sun", amount: 1250 },
-        ],
+        currentWeight: 0,
+        targetWeight: 0,
+        bmi: 0,
+        tdee: 0,
+        calorieGoal: 0,
+        dailyCalories: 0,
+        waterIntake: 0,
+        waterGoal: 0,
+        weightHistory: [],
+        waterHistory: [],
     });
 
     async function storeToken(value: string | null) {
@@ -121,9 +113,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return override || token;
     }
 
-    async function fetchWithAuth(path: string, opts: RequestInit = {}) {
+    async function fetchWithAuth(path: string, opts: RequestInit = {}, overrideToken?: string | null) {
         const headers = new Headers(opts.headers ?? {});
-        const authToken = resolveToken();
+        const authToken = resolveToken(overrideToken);
 
         if (authToken) {
             headers.set("Authorization", `Bearer ${authToken}`);
@@ -156,20 +148,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
 
             const body = (await res.json()) as any;
-            if (body && body.data) {
-                setUserData({
-                    name: body.data.fullName || body.data.name || "",
-                    email: body.data.email,
-                    age: body.data.age ?? 18,
-                    height: body.data.height ?? 170,
-                    weight: body.data.weight ?? 70,
-                    gender: body.data.gender ?? "male",
-                    activityLevel: body.data.activityLevel ?? "moderate",
-                    goal: body.data.goal ?? "maintain",
-                    dailyWaterGoal: body.data.dailyWaterGoal ?? 2000,
-                });
+            const user = body?.data?.user ?? body?.data;
 
-                return body.data;
+            if (user) {
+                setUserData(normalizeUser(user));
+
+                if (isFiniteNumber(user.weight)) {
+                    setHealthData((current) => ({
+                        ...current,
+                        currentWeight: user.weight,
+                    }));
+                }
+
+                return user;
             }
 
             return null;
@@ -180,10 +171,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
-    async function fetchHealth() {
+    async function fetchHealth(overrideToken?: string | null) {
         try {
-            const dash = await fetchWithAuth("/api/stats/dashboard");
-            const today = await fetchWithAuth("/api/water/today");
+            const dash = await fetchWithAuth("/api/stats/dashboard", {}, overrideToken);
+            const today = await fetchWithAuth("/api/water/today", {}, overrideToken);
 
             if (dash && dash.ok) {
                 const data = (await dash.json()) as any;
@@ -199,7 +190,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 const data = (await today.json()) as any;
                 setHealthData((current) => ({
                     ...current,
-                    waterIntake: data.data?.totalAmount ?? data.data?.amount ?? current.waterIntake,
+                    waterIntake: data.data?.totalAmount ?? data.data?.amount ?? 0,
                 }));
             }
         } catch (error) {
@@ -227,14 +218,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 await storeToken(nextToken);
             }
 
-            const profile = await fetchProfile(nextToken);
-            await fetchHealth();
-
-            if (!profile || profile.age === undefined || profile.height === undefined || profile.weight === undefined) {
-                setScreen("profile");
-            } else {
-                setScreen("dashboard");
+            const loginUserData = body.data?.user || body.user;
+            if (loginUserData) {
+                setUserData(normalizeUser(loginUserData));
             }
+
+            await fetchProfile(nextToken);
+            await fetchHealth(nextToken);
+            setScreen("dashboard");
 
             return true;
         } catch (error) {
@@ -255,30 +246,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 body: JSON.stringify(payload),
             });
 
-            const body = (await res.json()) as any;
+            await res.json();
             if (!res.ok) {
                 return false;
             }
 
-            const nextToken = body.data?.token || body.token;
-            if (nextToken) {
-                await storeToken(nextToken);
-            }
-
-            const profile = await fetchProfile(nextToken);
-            await fetchHealth();
-
-            if (body.data?.profileComplete === true) {
-                setScreen("dashboard");
-                return true;
-            }
-
-            if (!profile || profile.age === undefined || profile.height === undefined || profile.weight === undefined) {
-                setScreen("profile");
-                return true;
-            }
-
-            setScreen("dashboard");
             return true;
         } catch (error) {
             // eslint-disable-next-line no-console
@@ -292,7 +264,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     function updateWeight(weight: number) {
         setHealthData((current) => {
             const nextWeight = Number(weight.toFixed(1));
-            const heightMeters = Math.max(1, (userData?.height ?? 170) / 100);
+            const heightMeters = (userData?.height ?? 0) / 100;
+            if (heightMeters <= 0) {
+                return {
+                    ...current,
+                    currentWeight: nextWeight,
+                    weightHistory: [...current.weightHistory.slice(-6), { date: "Now", weight: nextWeight }],
+                };
+            }
             const nextBmi = Number((nextWeight / (heightMeters * heightMeters)).toFixed(1));
 
             return {
@@ -385,13 +364,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setUserData((current) => ({
                 name: updated.fullName || updated.name || current?.name || "",
                 email: updated.email || current?.email || "",
-                age: updated.age ?? current?.age ?? 18,
-                height: updated.height ?? current?.height ?? 170,
-                weight: updated.weight ?? current?.weight ?? 70,
-                gender: updated.gender ?? current?.gender ?? "male",
-                activityLevel: updated.activityLevel ?? current?.activityLevel ?? "moderate",
-                goal: updated.goal ?? current?.goal ?? "maintain",
-                dailyWaterGoal: updated.dailyWaterGoal ?? current?.dailyWaterGoal ?? 2000,
+                age: isFiniteNumber(updated.age) ? updated.age : current?.age,
+                height: isFiniteNumber(updated.height) ? updated.height : current?.height,
+                weight: isFiniteNumber(updated.weight) ? updated.weight : current?.weight,
+                gender: updated.gender ?? current?.gender,
+                activityLevel: updated.activityLevel ?? current?.activityLevel,
+                goal: updated.goal ?? current?.goal,
+                dailyWaterGoal: isFiniteNumber(updated.dailyWaterGoal) ? updated.dailyWaterGoal : current?.dailyWaterGoal,
             }));
 
             if (typeof updated.height === "number" && typeof updated.weight === "number") {
@@ -420,6 +399,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         void AsyncStorage.removeItem(TOKEN_KEY);
         setToken(null);
         setUserData(null);
+        setHealthData({
+            currentWeight: 0,
+            targetWeight: 0,
+            bmi: 0,
+            tdee: 0,
+            calorieGoal: 0,
+            dailyCalories: 0,
+            waterIntake: 0,
+            waterGoal: 0,
+            weightHistory: [],
+            waterHistory: [],
+        });
         setScreen("login");
     }
 
@@ -436,7 +427,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             if (storedToken) {
                 setToken(storedToken);
                 await fetchProfile(storedToken);
-                await fetchHealth();
+                await fetchHealth(storedToken);
                 setScreen("dashboard");
                 return;
             }

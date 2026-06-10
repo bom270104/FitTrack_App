@@ -18,7 +18,7 @@ const menuItems = [
 ] as const;
 
 export function ProfileScreen() {
-    const { userData, healthData, setScreen, updateProfile, logout } = useApp();
+    const { userData, setScreen, updateProfile, logout } = useApp();
     const [showNotifications, setShowNotifications] = useState(false);
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [activeInfo, setActiveInfo] = useState<{ title: string; body: string } | null>(null);
@@ -31,6 +31,11 @@ export function ProfileScreen() {
         dailyWaterGoal: String(userData?.dailyWaterGoal ?? 2000),
     });
     const [profileError, setProfileError] = useState<string | null>(null);
+
+    const parseOptionalNumber = (value: string) => {
+        const trimmed = value.trim();
+        return trimmed ? Number(trimmed) : undefined;
+    };
 
     const openEditProfile = () => {
         setProfileForm({
@@ -49,10 +54,10 @@ export function ProfileScreen() {
 
         const ok = await updateProfile({
             name: profileForm.name,
-            age: Number(profileForm.age),
-            height: Number(profileForm.height),
-            weight: Number(profileForm.weight),
-            dailyWaterGoal: Number(profileForm.dailyWaterGoal),
+            age: parseOptionalNumber(profileForm.age),
+            height: parseOptionalNumber(profileForm.height),
+            weight: parseOptionalNumber(profileForm.weight),
+            dailyWaterGoal: parseOptionalNumber(profileForm.dailyWaterGoal),
         });
 
         if (!ok) {
@@ -68,7 +73,7 @@ export function ProfileScreen() {
 
     const userStats = [
         { icon: "ruler", label: "Chiều cao", value: `${userData?.height ?? "-"} cm` },
-        { icon: "weight", label: "Cân nặng", value: `${healthData.currentWeight ?? "-"} kg` },
+        { icon: "weight", label: "Cân nặng", value: `${userData?.weight ?? "-"} kg` },
         { icon: "calendar", label: "Tuổi", value: `${userData?.age ?? "-"} tuổi` },
     ] as const;
 

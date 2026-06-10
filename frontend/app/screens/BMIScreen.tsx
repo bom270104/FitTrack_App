@@ -15,6 +15,7 @@ const bmiCategories = [
 ];
 
 function getBMICategory(bmi: number) {
+    if (bmi <= 0) return { label: "Chưa có dữ liệu", color: colors.muted };
     if (bmi < 18.5) return { label: "Gầy", color: colors.secondary };
     if (bmi < 25) return { label: "Bình thường", color: colors.primary };
     if (bmi < 30) return { label: "Thừa cân", color: colors.accent };
@@ -101,7 +102,7 @@ function LinearHero({ bmi, category, indicatorPosition }: { bmi: number; categor
         <View style={styles.heroOuter}>
             <View style={styles.hero}>
                 <Text style={styles.heroLabel}>BMI của bạn</Text>
-                <Text style={styles.heroValue}>{bmi.toFixed(1)}</Text>
+                <Text style={styles.heroValue}>{bmi > 0 ? bmi.toFixed(1) : "-"}</Text>
                 <Text style={styles.heroCategory}>{category}</Text>
 
                 <View style={styles.scaleTrack}>

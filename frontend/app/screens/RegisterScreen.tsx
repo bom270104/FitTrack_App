@@ -24,7 +24,13 @@ export function RegisterScreen() {
             const ok = await register({ fullName: name, email, password });
             if (!ok) {
                 Toast.show({ type: "error", text1: "Thông báo", text2: "Đăng ký thất bại" });
+                return;
             }
+
+            Toast.show({ type: "success", text1: "Thông báo", text2: "Đăng ký thành công" });
+            setTimeout(() => {
+                setScreen("login");
+            }, 3000);
         } catch (error) {
             // eslint-disable-next-line no-console
             console.error(error);
