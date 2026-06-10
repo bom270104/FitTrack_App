@@ -1,5 +1,6 @@
-"use client";
-
+import React from "react";
+import { SafeAreaView, StyleSheet, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useApp } from "./app-context";
 import { SplashScreen } from "./screens/SplashScreen";
 import { LoginScreen } from "./screens/LoginScreen";
@@ -16,17 +17,38 @@ export default function Page() {
     const { screen } = useApp();
 
     return (
-        <main className="screen-shell screen-bg-pattern">
-            {screen === "splash" && <SplashScreen />}
-            {screen === "login" && <LoginScreen />}
-            {screen === "register" && <RegisterScreen />}
-            {screen === "dashboard" && <DashboardScreen />}
-            {screen === "bmi" && <BMIScreen />}
-            {screen === "calories" && <CaloriesScreen />}
-            {screen === "water" && <WaterTrackerScreen />}
-            {screen === "statistics" && <StatisticsScreen />}
-            {screen === "profile" && <ProfileScreen />}
-            {screen === "goals" && <GoalsScreen />}
-        </main>
+        <SafeAreaView style={styles.safeArea}>
+            <LinearGradient colors={["#F8FAFC", "#EEFDF8", "#F8FAFC"]} style={styles.background}>
+                <View style={styles.shell}>
+                    {screen === "splash" && <SplashScreen />}
+                    {screen === "login" && <LoginScreen />}
+                    {screen === "register" && <RegisterScreen />}
+                    {screen === "dashboard" && <DashboardScreen />}
+                    {screen === "bmi" && <BMIScreen />}
+                    {screen === "calories" && <CaloriesScreen />}
+                    {screen === "water" && <WaterTrackerScreen />}
+                    {screen === "statistics" && <StatisticsScreen />}
+                    {screen === "profile" && <ProfileScreen />}
+                    {screen === "goals" && <GoalsScreen />}
+                </View>
+            </LinearGradient>
+        </SafeAreaView>
     );
 }
+
+const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: "#F8FAFC",
+    },
+    background: {
+        flex: 1,
+    },
+    shell: {
+        flex: 1,
+        maxWidth: 430,
+        width: "100%",
+        alignSelf: "center",
+        overflow: "hidden",
+    },
+});

@@ -1,24 +1,24 @@
-"use client";
-
-import { useState } from "react";
+import React, { useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useApp } from "../app-context";
 import { BottomNav } from "../bottom-nav";
-import { ArrowLeft, Info } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { colors, shadow } from "../theme";
 
 const bmiCategories = [
-    { range: "< 18.5", label: "Gầy", color: "bg-secondary" },
-    { range: "18.5 - 24.9", label: "Bình thường", color: "bg-primary" },
-    { range: "25 - 29.9", label: "Thừa cân", color: "bg-chart-4" },
-    { range: "> 30", label: "Béo phì", color: "bg-destructive" },
+    { range: "< 18.5", label: "Gầy", color: colors.secondary },
+    { range: "18.5 - 24.9", label: "Bình thường", color: colors.primary },
+    { range: "25 - 29.9", label: "Thừa cân", color: colors.accent },
+    { range: "> 30", label: "Béo phì", color: colors.destructive },
 ];
 
 function getBMICategory(bmi: number) {
-    if (bmi < 18.5) return { label: "Gầy", color: "text-secondary" };
-    if (bmi < 25) return { label: "Bình thường", color: "text-primary" };
-    if (bmi < 30) return { label: "Thừa cân", color: "text-chart-4" };
-    return { label: "Béo phì", color: "text-destructive" };
+    if (bmi < 18.5) return { label: "Gầy", color: colors.secondary };
+    if (bmi < 25) return { label: "Bình thường", color: colors.primary };
+    if (bmi < 30) return { label: "Thừa cân", color: colors.accent };
+    return { label: "Béo phì", color: colors.destructive };
 }
 
 export function BMIScreen() {
@@ -29,101 +29,246 @@ export function BMIScreen() {
     const [calculatedBMI, setCalculatedBMI] = useState<number>(initialBmi);
 
     const category = getBMICategory(calculatedBMI);
+    const indicatorPosition = Math.min(Math.max(((calculatedBMI - 15) / 25) * 100, 0), 100);
 
     const calculateBMI = async () => {
         const h = parseFloat(height) / 100;
         const w = parseFloat(weight);
+
         if (h > 0 && w > 0) {
             const bmi = parseFloat((w / (h * h)).toFixed(1));
             setCalculatedBMI(bmi);
             updateWeight(w);
             try {
                 await postBmi({ height: parseFloat(height), weight: w, bmi });
-            } catch (err) {
+            } catch (error) {
                 // eslint-disable-next-line no-console
-                console.error(err);
+                console.error(error);
+                Alert.alert("Thông báo", "Không thể lưu kết quả BMI");
             }
         }
     };
 
-    const indicatorPosition = Math.min(Math.max(((calculatedBMI - 15) / 25) * 100, 0), 100);
-
     return (
-        <div className="flex h-full flex-col bg-background">
-            <div className="px-5 pb-4 pt-14">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => setScreen("dashboard")} className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                        <ArrowLeft className="h-5 w-5 text-foreground" />
-                    </button>
-                    <h1 className="text-xl font-bold text-foreground">Máy tính BMI</h1>
-                </div>
-            </div>
+        <View style={styles.root}>
+            <View style={styles.header}>
+                <Pressable onPress={() => setScreen("dashboard")} style={styles.backButton}>
+                    <MaterialCommunityIcons name="arrow-left" size={22} color={colors.foreground} />
+                </Pressable>
+                <Text style={styles.headerTitle}>Máy tính BMI</Text>
+            </View>
 
-            <div className="flex-1 overflow-y-auto px-5 pb-28">
-                <div className="mb-6 rounded-3xl bg-gradient-to-br from-primary to-secondary p-6">
-                    <div className="mb-6 text-center">
-                        <p className="mb-1 text-sm text-primary-foreground/80">BMI của bạn</p>
-                        <p className="text-6xl font-bold text-primary-foreground">{calculatedBMI}</p>
-                        <p className="mt-2 text-lg font-medium text-primary-foreground">{category.label}</p>
-                    </div>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <LinearHero bmi={calculatedBMI} category={category.label} indicatorPosition={indicatorPosition} />
 
-                    <div className="relative mt-6">
-                        <div className="flex h-3 overflow-hidden rounded-full">
-                            <div className="flex-1 bg-secondary" />
-                            <div className="flex-1 bg-primary" />
-                            <div className="flex-1 bg-chart-4" />
-                            <div className="flex-1 bg-destructive" />
-                        </div>
-                        <div className="absolute -top-1 h-5 w-5 -translate-x-1/2 transform rounded-full border-2 border-foreground bg-primary-foreground shadow-lg transition-all duration-300" style={{ left: `${indicatorPosition}%` }} />
-                        <div className="mt-2 flex justify-between text-[10px] text-primary-foreground/70">
-                            <span>15</span>
-                            <span>18.5</span>
-                            <span>25</span>
-                            <span>30</span>
-                            <span>40</span>
-                        </div>
-                    </div>
-                </div>
+                <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>Tính BMI</Text>
+                    <View style={styles.field}>
+                        <Text style={styles.label}>Chiều cao (cm)</Text>
+                        <Input value={height} onChangeText={setHeight} keyboardType="numeric" placeholder="175" style={styles.input} inputStyle={styles.inputText} />
+                    </View>
+                    <View style={styles.field}>
+                        <Text style={styles.label}>Cân nặng (kg)</Text>
+                        <Input value={weight} onChangeText={setWeight} keyboardType="numeric" placeholder="70" style={styles.input} inputStyle={styles.inputText} />
+                    </View>
+                    <Button onPress={calculateBMI} title="Tính BMI" style={styles.primaryButton} />
+                </View>
 
-                <div className="mb-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Tính BMI</h3>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-xs font-medium text-muted-foreground">Chiều cao (cm)</label>
-                            <Input type="number" value={height} onChange={(e) => setHeight(e.target.value)} className="mt-1 h-12 rounded-xl border-0 bg-muted text-lg font-semibold" placeholder="175" />
-                        </div>
-
-                        <div>
-                            <label className="text-xs font-medium text-muted-foreground">Cân nặng (kg)</label>
-                            <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} className="mt-1 h-12 rounded-xl border-0 bg-muted text-lg font-semibold" placeholder="70" />
-                        </div>
-
-                        <Button onClick={calculateBMI} className="h-12 w-full rounded-xl bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-                            Tính BMI
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <div className="mb-4 flex items-center gap-2">
-                        <Info className="h-4 w-4 text-muted-foreground" />
-                        <h3 className="text-sm font-semibold text-foreground">Phân loại BMI</h3>
-                    </div>
-
-                    <div className="space-y-3">
-                        {bmiCategories.map((cat) => (
-                            <div key={cat.label} className="flex items-center gap-3">
-                                <div className={`h-3 w-3 rounded-full ${cat.color}`} />
-                                <span className="flex-1 text-sm text-foreground">{cat.label}</span>
-                                <span className="text-xs text-muted-foreground">{cat.range}</span>
-                            </div>
+                <View style={styles.card}>
+                    <View style={styles.sectionHeader}>
+                        <MaterialCommunityIcons name="information-outline" size={18} color={colors.muted} />
+                        <Text style={styles.sectionTitle}>Phân loại BMI</Text>
+                    </View>
+                    <View style={styles.categoryList}>
+                        {bmiCategories.map((item) => (
+                            <View key={item.label} style={styles.categoryRow}>
+                                <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
+                                <Text style={styles.categoryLabel}>{item.label}</Text>
+                                <Text style={styles.categoryRange}>{item.range}</Text>
+                            </View>
                         ))}
-                    </div>
-                </div>
-            </div>
+                    </View>
+                </View>
+            </ScrollView>
 
             <BottomNav />
-        </div>
+        </View>
     );
 }
+
+function LinearHero({ bmi, category, indicatorPosition }: { bmi: number; category: string; indicatorPosition: number }) {
+    return (
+        <View style={styles.heroOuter}>
+            <View style={styles.hero}>
+                <Text style={styles.heroLabel}>BMI của bạn</Text>
+                <Text style={styles.heroValue}>{bmi.toFixed(1)}</Text>
+                <Text style={styles.heroCategory}>{category}</Text>
+
+                <View style={styles.scaleTrack}>
+                    <View style={[styles.scaleSegment, { backgroundColor: colors.secondary }]} />
+                    <View style={[styles.scaleSegment, { backgroundColor: colors.primary }]} />
+                    <View style={[styles.scaleSegment, { backgroundColor: colors.accent }]} />
+                    <View style={[styles.scaleSegment, { backgroundColor: colors.destructive }]} />
+                </View>
+                <View style={[styles.indicator, { left: `${indicatorPosition}%` }]} />
+                <View style={styles.scaleLabels}>
+                    <Text style={styles.scaleLabel}>15</Text>
+                    <Text style={styles.scaleLabel}>18.5</Text>
+                    <Text style={styles.scaleLabel}>25</Text>
+                    <Text style={styles.scaleLabel}>30</Text>
+                    <Text style={styles.scaleLabel}>40</Text>
+                </View>
+            </View>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    root: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 12,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: colors.mutedSoft,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    content: {
+        paddingHorizontal: 20,
+        paddingBottom: 124,
+        gap: 16,
+    },
+    heroOuter: {
+        borderRadius: 28,
+        overflow: "hidden",
+    },
+    hero: {
+        borderRadius: 28,
+        padding: 20,
+        backgroundColor: colors.primary,
+    },
+    heroLabel: {
+        textAlign: "center",
+        fontSize: 13,
+        color: "rgba(255,255,255,0.82)",
+    },
+    heroValue: {
+        marginTop: 8,
+        textAlign: "center",
+        fontSize: 56,
+        fontWeight: "800",
+        color: "#FFFFFF",
+    },
+    heroCategory: {
+        marginTop: 6,
+        textAlign: "center",
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#FFFFFF",
+    },
+    scaleTrack: {
+        marginTop: 22,
+        flexDirection: "row",
+        height: 12,
+        borderRadius: 999,
+        overflow: "hidden",
+    },
+    scaleSegment: {
+        flex: 1,
+    },
+    indicator: {
+        position: "absolute",
+        top: 147,
+        width: 18,
+        height: 18,
+        marginLeft: -9,
+        borderRadius: 9,
+        borderWidth: 2,
+        borderColor: colors.foreground,
+        backgroundColor: "#FFFFFF",
+    },
+    scaleLabels: {
+        marginTop: 10,
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    scaleLabel: {
+        fontSize: 10,
+        color: "rgba(255,255,255,0.72)",
+    },
+    card: {
+        borderRadius: 24,
+        backgroundColor: colors.card,
+        padding: 18,
+        ...shadow,
+    },
+    sectionTitle: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: colors.foreground,
+    },
+    sectionHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 12,
+    },
+    field: {
+        gap: 8,
+        marginBottom: 14,
+    },
+    label: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: colors.muted,
+    },
+    input: {
+        backgroundColor: colors.mutedSoft,
+    },
+    inputText: {
+        fontSize: 18,
+        fontWeight: "700",
+    },
+    primaryButton: {
+        marginTop: 2,
+        backgroundColor: colors.primary,
+    },
+    categoryList: {
+        gap: 12,
+    },
+    categoryRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
+    categoryDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+    },
+    categoryLabel: {
+        flex: 1,
+        fontSize: 14,
+        color: colors.foreground,
+    },
+    categoryRange: {
+        fontSize: 12,
+        color: colors.muted,
+    },
+});

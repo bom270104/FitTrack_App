@@ -1,8 +1,9 @@
-"use client";
-
-import { useEffect } from "react";
+import React, { useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useApp } from "../app-context";
-import { Activity } from "lucide-react";
+import { colors } from "../theme";
 
 export function SplashScreen() {
     const { setScreen } = useApp();
@@ -11,26 +12,80 @@ export function SplashScreen() {
         const timer = setTimeout(() => {
             setScreen("login");
         }, 2500);
+
         return () => clearTimeout(timer);
     }, [setScreen]);
 
     return (
-        <div className="flex h-full flex-col items-center justify-center bg-gradient-to-br from-primary via-primary to-secondary">
-            <div className="flex flex-col items-center gap-6 animate-pulse">
-                <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-primary-foreground/20 backdrop-blur-sm">
-                    <Activity className="h-14 w-14 text-primary-foreground" strokeWidth={2.5} />
-                </div>
-                <div className="text-center">
-                    <h1 className="text-4xl font-bold tracking-tight text-primary-foreground">FitTrack</h1>
-                    <p className="mt-2 text-sm font-medium text-primary-foreground/80">Bạn đồng hành sức khỏe</p>
-                </div>
-            </div>
+        <LinearGradient colors={[colors.primary, "#0E8C82", colors.secondary]} style={styles.root}>
+            <View style={styles.center}>
+                <View style={styles.logoWrap}>
+                    <MaterialCommunityIcons name="heart-pulse" size={58} color="#FFFFFF" />
+                </View>
+                <View style={styles.copy}>
+                    <Text style={styles.title}>FitTrack</Text>
+                    <Text style={styles.subtitle}>Bạn đồng hành sức khỏe</Text>
+                </View>
+            </View>
 
-            <div className="absolute bottom-24 flex gap-1.5">
-                <div className="h-2 w-2 animate-bounce rounded-full bg-primary-foreground/60" style={{ animationDelay: "0ms" }} />
-                <div className="h-2 w-2 animate-bounce rounded-full bg-primary-foreground/60" style={{ animationDelay: "150ms" }} />
-                <div className="h-2 w-2 animate-bounce rounded-full bg-primary-foreground/60" style={{ animationDelay: "300ms" }} />
-            </div>
-        </div>
+            <View style={styles.dots}>
+                <View style={styles.dot} />
+                <View style={[styles.dot, styles.dotMid]} />
+                <View style={[styles.dot, styles.dotLast]} />
+            </View>
+        </LinearGradient>
     );
 }
+
+const styles = StyleSheet.create({
+    root: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    center: {
+        alignItems: "center",
+        gap: 22,
+    },
+    logoWrap: {
+        width: 104,
+        height: 104,
+        borderRadius: 32,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(255,255,255,0.18)",
+    },
+    copy: {
+        alignItems: "center",
+    },
+    title: {
+        fontSize: 40,
+        fontWeight: "800",
+        letterSpacing: -0.8,
+        color: "#FFFFFF",
+    },
+    subtitle: {
+        marginTop: 8,
+        fontSize: 14,
+        fontWeight: "600",
+        color: "rgba(255,255,255,0.82)",
+    },
+    dots: {
+        position: "absolute",
+        bottom: 96,
+        flexDirection: "row",
+        gap: 8,
+    },
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 8,
+        backgroundColor: "rgba(255,255,255,0.65)",
+    },
+    dotMid: {
+        opacity: 0.8,
+    },
+    dotLast: {
+        opacity: 0.6,
+    },
+});

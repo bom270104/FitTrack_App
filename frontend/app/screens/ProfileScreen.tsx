@@ -1,40 +1,21 @@
-"use client";
-
+import React, { useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 import { useApp } from "../app-context";
-import { useState } from "react";
 import { BottomNav } from "../bottom-nav";
 import NotificationSettings from "../components/NotificationSettings";
-import { User, Settings, Bell, Shield, HelpCircle, LogOut, ChevronRight, Moon, Ruler, Weight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-const genderOptions = [
-    { label: "Nam", value: "male" },
-    { label: "Nữ", value: "female" },
-    { label: "Khác", value: "other" },
-];
-
-const activityOptions = [
-    { label: "Ít vận động", value: "sedentary" },
-    { label: "Vận động nhẹ", value: "light" },
-    { label: "Vận động vừa", value: "moderate" },
-    { label: "Vận động nhiều", value: "active" },
-    { label: "Rất năng động", value: "very_active" },
-];
-
-const goalOptions = [
-    { label: "Tăng cân", value: "gain" },
-    { label: "Giảm cân", value: "lose" },
-    { label: "Giữ cân", value: "maintain" },
-];
+import { colors, shadow } from "../theme";
 
 const menuItems = [
-    { icon: Bell, label: "Thông báo", action: "notifications" },
-    { icon: Moon, label: "Giao diện tối", action: "darkmode", toggle: true },
-    { icon: Shield, label: "Quyền riêng tư", action: "privacy" },
-    { icon: HelpCircle, label: "Trợ giúp", action: "help" },
-    { icon: Settings, label: "Cài đặt ứng dụng", action: "settings" },
-];
+    { icon: "bell-outline", label: "Thông báo", action: "notifications" },
+    { icon: "moon-waning-crescent", label: "Giao diện tối", action: "darkmode", toggle: true },
+    { icon: "shield-outline", label: "Quyền riêng tư", action: "privacy" },
+    { icon: "help-circle-outline", label: "Trợ giúp", action: "help" },
+    { icon: "cog-outline", label: "Cài đặt ứng dụng", action: "settings" },
+] as const;
 
 export function ProfileScreen() {
     const { userData, healthData, setScreen, updateProfile, logout } = useApp();
@@ -47,13 +28,9 @@ export function ProfileScreen() {
         age: String(userData?.age ?? ""),
         height: String(userData?.height ?? ""),
         weight: String(userData?.weight ?? ""),
-        gender: userData?.gender ?? "male",
-        activityLevel: userData?.activityLevel ?? "moderate",
-        goal: userData?.goal ?? "maintain",
         dailyWaterGoal: String(userData?.dailyWaterGoal ?? 2000),
     });
     const [profileError, setProfileError] = useState<string | null>(null);
-    const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
 
     const openEditProfile = () => {
         setProfileForm({
@@ -61,228 +38,458 @@ export function ProfileScreen() {
             age: String(userData?.age ?? ""),
             height: String(userData?.height ?? ""),
             weight: String(userData?.weight ?? ""),
-            gender: userData?.gender ?? "male",
-            activityLevel: userData?.activityLevel ?? "moderate",
-            goal: userData?.goal ?? "maintain",
             dailyWaterGoal: String(userData?.dailyWaterGoal ?? 2000),
         });
         setProfileError(null);
-        setProfileSuccess(null);
         setShowEditProfile(true);
     };
 
     const saveProfile = async () => {
         setProfileError(null);
-        setProfileSuccess(null);
 
         const ok = await updateProfile({
             name: profileForm.name,
             age: Number(profileForm.age),
             height: Number(profileForm.height),
             weight: Number(profileForm.weight),
-            gender: profileForm.gender,
-            activityLevel: profileForm.activityLevel,
-            goal: profileForm.goal,
             dailyWaterGoal: Number(profileForm.dailyWaterGoal),
         });
 
         if (!ok) {
-            setProfileError("Không thể cập nhật hồ sơ. Vui lòng thử lại.");
+            const message = "Không thể cập nhật hồ sơ. Vui lòng thử lại.";
+            setProfileError(message);
+            Toast.show({ type: "error", text1: "Thông báo", text2: message });
             return;
         }
 
-        setProfileSuccess("Đã cập nhật hồ sơ thành công.");
+        Toast.show({ type: "success", text1: "Thông báo", text2: "Đã cập nhật hồ sơ thành công." });
         setShowEditProfile(false);
     };
 
     const userStats = [
-        { icon: Ruler, label: "Chiều cao", value: `${userData?.height ?? "-"} cm` },
-        { icon: Weight, label: "Cân nặng", value: `${healthData.currentWeight ?? "-"} kg` },
-        { icon: Calendar, label: "Tuổi", value: `${userData?.age ?? "-"} tuổi` },
-    ];
-
-    const handleLogout = () => {
-        logout();
-    };
+        { icon: "ruler", label: "Chiều cao", value: `${userData?.height ?? "-"} cm` },
+        { icon: "weight", label: "Cân nặng", value: `${healthData.currentWeight ?? "-"} kg` },
+        { icon: "calendar", label: "Tuổi", value: `${userData?.age ?? "-"} tuổi` },
+    ] as const;
 
     return (
-        <div className="flex h-full flex-col bg-background">
-            <div className="px-5 pb-4 pt-14">
-                <h1 className="text-xl font-bold text-foreground">Hồ sơ</h1>
-            </div>
+        <View style={styles.root}>
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>Hồ sơ</Text>
+            </View>
 
-            <div className="flex-1 overflow-y-auto px-5 pb-28">
-                <div className="mb-6 rounded-3xl bg-gradient-to-br from-primary to-secondary p-6">
-                    <div className="flex items-center gap-4">
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-foreground/20">
-                            <User className="h-10 w-10 text-primary-foreground" />
-                        </div>
-                        <div className="flex-1">
-                            <h2 className="text-xl font-bold text-primary-foreground">{userData?.name ?? ""}</h2>
-                            <p className="text-sm text-primary-foreground/80">{userData?.email ?? ""}</p>
-                            <button onClick={openEditProfile} className="mt-2 rounded-full bg-primary-foreground/20 px-4 py-1.5 text-xs font-medium text-primary-foreground">
-                                Chỉnh sửa hồ sơ
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <View style={styles.hero}>
+                    <View style={styles.heroRow}>
+                        <View style={styles.avatar}>
+                            <MaterialCommunityIcons name="account-outline" size={42} color="#FFFFFF" />
+                        </View>
+                        <View style={styles.heroBody}>
+                            <Text style={styles.heroName}>{userData?.name ?? ""}</Text>
+                            <Text style={styles.heroEmail}>{userData?.email ?? ""}</Text>
+                            <Pressable onPress={openEditProfile} style={styles.editPill}>
+                                <Text style={styles.editText}>Chỉnh sửa hồ sơ</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
 
-                <div className="mb-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
-                    <div className="flex justify-around">
+                <View style={styles.statsCard}>
+                    <View style={styles.statsRow}>
                         {userStats.map((stat) => (
-                            <div key={stat.label} className="flex flex-col items-center">
-                                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                                    <stat.icon className="h-5 w-5 text-primary" />
-                                </div>
-                                <p className="text-xs text-muted-foreground">{stat.label}</p>
-                                <p className="text-sm font-semibold text-foreground">{stat.value}</p>
-                            </div>
+                            <View key={stat.label} style={styles.statItem}>
+                                <View style={styles.statIcon}><MaterialCommunityIcons name={stat.icon as any} size={20} color={colors.primary} /></View>
+                                <Text style={styles.statLabel}>{stat.label}</Text>
+                                <Text style={styles.statValue}>{stat.value}</Text>
+                            </View>
                         ))}
-                    </div>
-                </div>
+                    </View>
+                </View>
 
-                <button onClick={() => setScreen("goals")} className="mb-4 w-full rounded-2xl border border-border bg-card p-5 text-left shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-sm font-semibold text-foreground">Mục tiêu của tôi</h3>
-                            <p className="mt-1 text-xs text-muted-foreground">3 mục tiêu đang hoạt động</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-primary">78%</span>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                    </div>
-                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
-                        <div className="h-full w-[78%] rounded-full bg-primary" />
-                    </div>
-                </button>
+                <Pressable onPress={() => setScreen("goals")} style={styles.goalCard}>
+                    <View style={styles.goalHeader}>
+                        <View>
+                            <Text style={styles.goalTitle}>Mục tiêu của tôi</Text>
+                            <Text style={styles.goalSubtitle}>3 mục tiêu đang hoạt động</Text>
+                        </View>
+                        <View style={styles.goalRight}>
+                            <Text style={styles.goalPercent}>78%</Text>
+                            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
+                        </View>
+                    </View>
+                    <View style={styles.goalProgressTrack}><View style={styles.goalProgressFill} /></View>
+                </Pressable>
 
-                <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                <View style={styles.menuCard}>
                     {menuItems.map((item, index) => (
-                        <button
+                        <Pressable
                             key={item.action}
-                            onClick={() => {
+                            onPress={() => {
                                 if (item.action === "notifications") {
                                     setShowNotifications(true);
                                     return;
                                 }
                                 if (item.action === "privacy") {
-                                    setActiveInfo({
-                                        title: "Quyền riêng tư",
-                                        body: "Dữ liệu hồ sơ của bạn được lưu trữ an toàn trên backend của FitTrack. Xác thực bằng token bảo vệ các tuyến riêng tư.",
-                                    });
+                                    setActiveInfo({ title: "Quyền riêng tư", body: "Dữ liệu hồ sơ của bạn được lưu trữ an toàn trên backend của FitTrack. Xác thực bằng token bảo vệ các tuyến riêng tư." });
                                     return;
                                 }
                                 if (item.action === "help") {
-                                    setActiveInfo({
-                                        title: "Trợ giúp",
-                                        body: "Sử dụng Dashboard để tổng quan, BMI để tính chỉ số cơ thể, Water để ghi lại lượng uống và Thống kê để xem xu hướng.",
-                                    });
+                                    setActiveInfo({ title: "Trợ giúp", body: "Sử dụng Dashboard để tổng quan, BMI để tính chỉ số cơ thể, Water để ghi lại lượng uống và Thống kê để xem xu hướng." });
                                     return;
                                 }
                                 if (item.action === "settings") {
-                                    setActiveInfo({
-                                        title: "Cài đặt ứng dụng",
-                                        body: "Bản demo hiện hỗ trợ hồ sơ, cài đặt thông báo và theo dõi sức khỏe. Chế độ tối được giữ như một tuỳ chọn giao diện cục bộ.",
-                                    });
+                                    setActiveInfo({ title: "Cài đặt ứng dụng", body: "Bản demo hiện hỗ trợ hồ sơ, cài đặt thông báo và theo dõi sức khỏe. Chế độ tối được giữ như một tuỳ chọn giao diện cục bộ." });
                                     return;
                                 }
                                 if (item.action === "darkmode") {
                                     setDarkModeEnabled((current) => !current);
                                 }
                             }}
-                            className={`flex w-full items-center justify-between p-4 transition-colors hover:bg-muted/50 ${index !== menuItems.length - 1 ? "border-b border-border" : ""}`}
+                            style={({ pressed }) => [styles.menuRow, index !== menuItems.length - 1 && styles.menuDivider, pressed && styles.menuPressed]}
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
-                                    <item.icon className="h-4 w-4 text-foreground" />
-                                </div>
-                                <span className="text-sm font-medium text-foreground">{item.label}</span>
-                            </div>
-                            {item.toggle ? (
-                                <div className="relative h-6 w-11 rounded-full bg-muted">
-                                    <div className={`absolute top-1 h-4 w-4 rounded-full bg-muted-foreground transition-all ${darkModeEnabled ? "left-6" : "left-1"}`} />
-                                </div>
+                            <View style={styles.menuLeft}>
+                                <View style={styles.menuIcon}><MaterialCommunityIcons name={item.icon as any} size={18} color={colors.foreground} /></View>
+                                <Text style={styles.menuLabel}>{item.label}</Text>
+                            </View>
+                            {"toggle" in item && item.toggle ? (
+                                <View style={styles.switchTrack}>
+                                    <View style={[styles.switchThumb, darkModeEnabled && styles.switchThumbActive]} />
+                                </View>
                             ) : (
-                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
                             )}
-                        </button>
+                        </Pressable>
                     ))}
-                </div>
-                {showNotifications && <NotificationSettings onClose={() => setShowNotifications(false)} />}
+                </View>
 
-                {activeInfo && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                        <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-xl">
-                            <h3 className="mb-3 text-lg font-semibold text-foreground">{activeInfo.title}</h3>
-                            <p className="text-sm text-muted-foreground">{activeInfo.body}</p>
-                            <div className="mt-5 flex justify-end">
-                                <button onClick={() => setActiveInfo(null)} className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-                                    Đóng
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <Pressable onPress={logout} style={styles.logoutButton}>
+                    <MaterialCommunityIcons name="logout" size={18} color={colors.destructive} />
+                    <Text style={styles.logoutText}>Đăng xuất</Text>
+                </Pressable>
+            </ScrollView>
 
-                {showEditProfile && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                        <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-xl">
-                            <h3 className="mb-4 text-lg font-semibold text-foreground">Chỉnh sửa hồ sơ</h3>
-                            <div className="space-y-3">
-                                <Input value={profileForm.name} onChange={(e) => setProfileForm((current) => ({ ...current, name: e.target.value }))} placeholder="Họ và tên" className="h-12 rounded-xl border-0 bg-muted" />
-                                <p className="text-xs text-muted-foreground">Email chỉ đọc và theo thông tin đăng ký tài khoản.</p>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Input value={profileForm.age} onChange={(e) => setProfileForm((current) => ({ ...current, age: e.target.value }))} placeholder="Tuổi" type="number" className="h-12 rounded-xl border-0 bg-muted" />
-                                    <Input value={profileForm.height} onChange={(e) => setProfileForm((current) => ({ ...current, height: e.target.value }))} placeholder="Chiều cao (cm)" type="number" className="h-12 rounded-xl border-0 bg-muted" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Input value={profileForm.weight} onChange={(e) => setProfileForm((current) => ({ ...current, weight: e.target.value }))} placeholder="Cân nặng (kg)" type="number" className="h-12 rounded-xl border-0 bg-muted" />
-                                    <Input value={profileForm.dailyWaterGoal} onChange={(e) => setProfileForm((current) => ({ ...current, dailyWaterGoal: e.target.value }))} placeholder="Mục tiêu nước (ml)" type="number" className="h-12 rounded-xl border-0 bg-muted" />
-                                </div>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <select value={profileForm.gender} onChange={(e) => setProfileForm((current) => ({ ...current, gender: e.target.value }))} className="h-12 rounded-xl border border-border bg-muted px-3 text-sm outline-none">
-                                        {genderOptions.map((option) => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                    <select value={profileForm.activityLevel} onChange={(e) => setProfileForm((current) => ({ ...current, activityLevel: e.target.value }))} className="h-12 rounded-xl border border-border bg-muted px-3 text-sm outline-none">
-                                        {activityOptions.map((option) => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                    <select value={profileForm.goal} onChange={(e) => setProfileForm((current) => ({ ...current, goal: e.target.value }))} className="h-12 rounded-xl border border-border bg-muted px-3 text-sm outline-none">
-                                        {goalOptions.map((option) => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+            {showNotifications ? <NotificationSettings visible={showNotifications} onClose={() => setShowNotifications(false)} /> : null}
 
-                            {profileError && <p className="mt-3 text-sm text-destructive">{profileError}</p>}
-                            {profileSuccess && <p className="mt-3 text-sm text-primary">{profileSuccess}</p>}
+            <Modal visible={!!activeInfo} transparent animationType="fade" onRequestClose={() => setActiveInfo(null)}>
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.infoCard}>
+                        <Text style={styles.infoTitle}>{activeInfo?.title}</Text>
+                        <Text style={styles.infoBody}>{activeInfo?.body}</Text>
+                        <View style={styles.infoActions}>
+                            <Button onPress={() => setActiveInfo(null)} title="Đóng" style={styles.infoButton} />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
-                            <div className="mt-5 flex gap-3">
-                                <Button variant="outline" onClick={() => setShowEditProfile(false)} className="h-12 flex-1 rounded-xl border-border">
-                                    Hủy
-                                </Button>
-                                <Button onClick={saveProfile} className="h-12 flex-1 rounded-xl bg-primary text-primary-foreground">
-                                    Lưu
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <button onClick={handleLogout} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-destructive/10 p-4 font-medium text-destructive">
-                    <LogOut className="h-5 w-5" />
-                    <span>Đăng xuất</span>
-                </button>
-
-                <p className="mt-6 text-center text-xs text-muted-foreground">FitTrack v1.0.0</p>
-            </div>
+            <Modal visible={showEditProfile} transparent animationType="fade" onRequestClose={() => setShowEditProfile(false)}>
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.editCard}>
+                        <Text style={styles.infoTitle}>Chỉnh sửa hồ sơ</Text>
+                        <View style={styles.editFields}>
+                            <Input value={profileForm.name} onChangeText={(text) => setProfileForm((current) => ({ ...current, name: text }))} placeholder="Họ và tên" />
+                            <Text style={styles.helperText}>Email chỉ đọc và theo thông tin đăng ký tài khoản.</Text>
+                            <View style={styles.twoCol}>
+                                <Input value={profileForm.age} onChangeText={(text) => setProfileForm((current) => ({ ...current, age: text }))} placeholder="Tuổi" keyboardType="numeric" style={styles.flexInput} />
+                                <Input value={profileForm.height} onChangeText={(text) => setProfileForm((current) => ({ ...current, height: text }))} placeholder="Chiều cao (cm)" keyboardType="numeric" style={styles.flexInput} />
+                            </View>
+                            <View style={styles.twoCol}>
+                                <Input value={profileForm.weight} onChangeText={(text) => setProfileForm((current) => ({ ...current, weight: text }))} placeholder="Cân nặng (kg)" keyboardType="numeric" style={styles.flexInput} />
+                                <Input value={profileForm.dailyWaterGoal} onChangeText={(text) => setProfileForm((current) => ({ ...current, dailyWaterGoal: text }))} placeholder="Mục tiêu nước (ml)" keyboardType="numeric" style={styles.flexInput} />
+                            </View>
+                            {profileError ? <Text style={styles.errorText}>{profileError}</Text> : null}
+                            <View style={styles.editActions}>
+                                <Button variant="outline" onPress={() => setShowEditProfile(false)} title="Hủy" style={styles.actionButton} />
+                                <Button onPress={saveProfile} title="Lưu" style={styles.actionButtonPrimary} />
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             <BottomNav />
-        </div>
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    root: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+    header: {
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 12,
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    content: {
+        paddingHorizontal: 20,
+        paddingBottom: 124,
+        gap: 16,
+    },
+    hero: {
+        borderRadius: 28,
+        backgroundColor: colors.primary,
+        padding: 20,
+    },
+    heroRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 14,
+    },
+    avatar: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: "rgba(255,255,255,0.18)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    heroBody: {
+        flex: 1,
+    },
+    heroName: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#FFFFFF",
+    },
+    heroEmail: {
+        marginTop: 4,
+        fontSize: 13,
+        color: "rgba(255,255,255,0.82)",
+    },
+    editPill: {
+        alignSelf: "flex-start",
+        marginTop: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 999,
+        backgroundColor: "rgba(255,255,255,0.18)",
+    },
+    editText: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: "#FFFFFF",
+    },
+    statsCard: {
+        borderRadius: 22,
+        backgroundColor: colors.card,
+        padding: 16,
+        ...shadow,
+    },
+    statsRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    statItem: {
+        alignItems: "center",
+        flex: 1,
+    },
+    statIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 14,
+        backgroundColor: colors.primarySoft,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 8,
+    },
+    statLabel: {
+        fontSize: 11,
+        color: colors.muted,
+    },
+    statValue: {
+        marginTop: 4,
+        fontSize: 14,
+        fontWeight: "700",
+        color: colors.foreground,
+    },
+    goalCard: {
+        borderRadius: 22,
+        backgroundColor: colors.card,
+        padding: 18,
+        ...shadow,
+    },
+    goalHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+    goalTitle: {
+        fontSize: 14,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    goalSubtitle: {
+        marginTop: 4,
+        fontSize: 12,
+        color: colors.muted,
+    },
+    goalRight: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+    },
+    goalPercent: {
+        fontSize: 13,
+        fontWeight: "800",
+        color: colors.primary,
+    },
+    goalProgressTrack: {
+        height: 8,
+        borderRadius: 999,
+        backgroundColor: "#E2E8F0",
+        overflow: "hidden",
+    },
+    goalProgressFill: {
+        width: "78%",
+        height: "100%",
+        borderRadius: 999,
+        backgroundColor: colors.primary,
+    },
+    menuCard: {
+        borderRadius: 22,
+        backgroundColor: colors.card,
+        overflow: "hidden",
+        ...shadow,
+    },
+    menuRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 16,
+    },
+    menuDivider: {
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(148,163,184,0.14)",
+    },
+    menuPressed: {
+        opacity: 0.92,
+    },
+    menuLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    menuIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        backgroundColor: colors.mutedSoft,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    menuLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: colors.foreground,
+    },
+    switchTrack: {
+        width: 46,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: colors.mutedSoft,
+        justifyContent: "center",
+        paddingHorizontal: 4,
+    },
+    switchThumb: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: colors.muted,
+    },
+    switchThumbActive: {
+        alignSelf: "flex-end",
+        backgroundColor: colors.primary,
+    },
+    logoutButton: {
+        marginTop: 4,
+        borderRadius: 18,
+        backgroundColor: colors.card,
+        padding: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        ...shadow,
+    },
+    logoutText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: colors.destructive,
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: "rgba(15,23,42,0.42)",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+    },
+    infoCard: {
+        width: "100%",
+        borderRadius: 24,
+        backgroundColor: colors.card,
+        padding: 18,
+        ...shadow,
+    },
+    infoTitle: {
+        fontSize: 17,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    infoBody: {
+        marginTop: 10,
+        fontSize: 13,
+        lineHeight: 20,
+        color: colors.muted,
+    },
+    infoActions: {
+        marginTop: 16,
+        alignItems: "flex-end",
+    },
+    infoButton: {
+        minWidth: 100,
+    },
+    editCard: {
+        width: "100%",
+        borderRadius: 24,
+        backgroundColor: colors.card,
+        padding: 18,
+        ...shadow,
+    },
+    editFields: {
+        gap: 12,
+        marginTop: 14,
+    },
+    helperText: {
+        fontSize: 12,
+        color: colors.muted,
+    },
+    twoCol: {
+        flexDirection: "row",
+        gap: 10,
+    },
+    flexInput: {
+        flex: 1,
+    },
+    errorText: {
+        fontSize: 13,
+        color: colors.destructive,
+    },
+    editActions: {
+        flexDirection: "row",
+        gap: 10,
+    },
+    actionButton: {
+        flex: 1,
+    },
+    actionButtonPrimary: {
+        flex: 1,
+        backgroundColor: colors.primary,
+    },
+});

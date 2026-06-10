@@ -1,10 +1,9 @@
-"use client";
-
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useApp } from "../app-context";
 import { BottomNav } from "../bottom-nav";
-import { ArrowLeft, TrendingDown, Droplets, Flame, Scale } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, CartesianGrid } from "recharts";
+import { colors, shadow } from "../theme";
 
 export function StatisticsScreen() {
     const { healthData, setScreen } = useApp();
@@ -13,16 +12,15 @@ export function StatisticsScreen() {
     const derivedStats = useMemo(() => {
         const weights = healthData.weightHistory || [];
         const waters = healthData.waterHistory || [];
-
         const avgWeight = weights.length ? weights.reduce((sum, item) => sum + Number(item.weight || 0), 0) / weights.length : healthData.currentWeight;
         const avgWater = waters.length ? waters.reduce((sum, item) => sum + Number(item.amount || 0), 0) / waters.length : healthData.waterIntake;
         const bmiChange = weights.length > 1 ? Number((weights[weights.length - 1].weight - weights[0].weight).toFixed(1)) : 0;
 
         return [
-            { label: "Cân nặng TB", value: avgWeight.toFixed(1), unit: "kg", change: `${bmiChange <= 0 ? "" : "+"}${bmiChange.toFixed(1)}kg`, positive: bmiChange <= 0, icon: Scale, color: "bg-primary/10 text-primary" },
-            { label: "Nước TB", value: Math.round(avgWater).toLocaleString(), unit: "ml", change: healthData.waterIntake >= healthData.waterGoal ? "Đạt mục tiêu" : "Chưa đạt", positive: healthData.waterIntake >= healthData.waterGoal, icon: Droplets, color: "bg-secondary/10 text-secondary" },
-            { label: "Calo TB", value: Math.round(healthData.dailyCalories).toLocaleString(), unit: "kcal", change: `${healthData.calorieGoal - healthData.dailyCalories >= 0 ? "-" : "+"}${Math.abs(healthData.calorieGoal - healthData.dailyCalories)}`, positive: healthData.dailyCalories <= healthData.calorieGoal, icon: Flame, color: "bg-accent/10 text-accent" },
-            { label: "Thay đổi BMI", value: Number(healthData.bmi).toFixed(1), unit: "kg/m2", change: "BMI hiện tại", positive: true, icon: TrendingDown, color: "bg-chart-5/10 text-chart-5" },
+            { label: "Cân nặng TB", value: avgWeight.toFixed(1), unit: "kg", change: `${bmiChange <= 0 ? "" : "+"}${bmiChange.toFixed(1)}kg`, positive: bmiChange <= 0, icon: "scale-balance", tint: colors.primarySoft, color: colors.primary },
+            { label: "Nước TB", value: Math.round(avgWater).toLocaleString(), unit: "ml", change: healthData.waterIntake >= healthData.waterGoal ? "Đạt mục tiêu" : "Chưa đạt", positive: healthData.waterIntake >= healthData.waterGoal, icon: "water-outline", tint: colors.secondarySoft, color: colors.secondary },
+            { label: "Calo TB", value: Math.round(healthData.dailyCalories).toLocaleString(), unit: "kcal", change: `${healthData.calorieGoal - healthData.dailyCalories >= 0 ? "-" : "+"}${Math.abs(healthData.calorieGoal - healthData.dailyCalories)}`, positive: healthData.dailyCalories <= healthData.calorieGoal, icon: "fire", tint: colors.accentSoft, color: colors.accent },
+            { label: "Thay đổi BMI", value: Number(healthData.bmi).toFixed(1), unit: "kg/m2", change: "BMI hiện tại", positive: true, icon: "trending-down", tint: "rgba(139,92,246,0.10)", color: "#8B5CF6" },
         ];
     }, [healthData]);
 
@@ -41,71 +39,288 @@ export function StatisticsScreen() {
     }, [healthData.waterHistory, range]);
 
     return (
-        <div className="flex h-full flex-col bg-background">
-            <div className="px-5 pb-4 pt-14">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => setScreen("dashboard")} className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                        <ArrowLeft className="h-5 w-5 text-foreground" />
-                    </button>
-                    <h1 className="text-xl font-bold text-foreground">Thống kê</h1>
-                </div>
-            </div>
+        <View style={styles.root}>
+            <View style={styles.header}>
+                <Pressable onPress={() => setScreen("dashboard")} style={styles.backButton}>
+                    <MaterialCommunityIcons name="arrow-left" size={22} color={colors.foreground} />
+                </Pressable>
+                <Text style={styles.headerTitle}>Thống kê</Text>
+            </View>
 
-            <div className="flex-1 overflow-y-auto px-5 pb-28">
-                <div className="mb-6 flex gap-2">
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <View style={styles.rangeRow}>
                     {(["Week", "Month", "Year"] as const).map((item) => (
-                        <button key={item} onClick={() => setRange(item)} className={`flex-1 rounded-xl py-2 text-sm font-medium transition-all ${range === item ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                            {item === "Week" ? "Tuần" : item === "Month" ? "Tháng" : "Năm"}
-                        </button>
+                        <Pressable key={item} onPress={() => setRange(item)} style={[styles.rangePill, range === item && styles.rangePillActive]}>
+                            <Text style={[styles.rangeText, range === item && styles.rangeTextActive]}>{item === "Week" ? "Tuần" : item === "Month" ? "Tháng" : "Năm"}</Text>
+                        </Pressable>
                     ))}
-                </div>
+                </View>
 
-                <div className="mb-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Tiến trình cân nặng</h3>
-                    <div className="h-40">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartWeightData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                                <YAxis domain={[70, 74]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={30} />
-                                <Line type="monotone" dataKey="weight" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ fill: "hsl(var(--primary))", strokeWidth: 0, r: 4 }} activeDot={{ r: 6, fill: "hsl(var(--primary))" }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                <ChartCard title="Tiến trình cân nặng">
+                    <LineChart data={chartWeightData} color={colors.primary} />
+                </ChartCard>
 
-                <div className="mb-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Lượng nước</h3>
-                    <div className="h-40">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartWaterData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={35} />
-                                <Bar dataKey="amount" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                <ChartCard title="Lượng nước">
+                    <BarChart data={chartWaterData} color={colors.secondary} />
+                </ChartCard>
 
-                <div className="grid grid-cols-2 gap-3">
+                <View style={styles.grid}>
                     {derivedStats.map((stat) => (
-                        <div key={stat.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-                            <div className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${stat.color}`}>
-                                <stat.icon className="h-4 w-4" />
-                            </div>
-                            <p className="text-xs text-muted-foreground">{stat.label}</p>
-                            <div className="mt-1 flex items-baseline gap-1">
-                                <span className="text-xl font-bold text-foreground">{stat.value}</span>
-                                <span className="text-xs text-muted-foreground">{stat.unit}</span>
-                            </div>
-                            <p className={`mt-1 text-xs ${stat.positive ? "text-primary" : "text-destructive"}`}>{stat.change}</p>
-                        </div>
+                        <View key={stat.label} style={styles.statCard}>
+                            <View style={[styles.statIcon, { backgroundColor: stat.tint }]}>
+                                <MaterialCommunityIcons name={stat.icon as any} size={18} color={stat.color} />
+                            </View>
+                            <Text style={styles.statLabel}>{stat.label}</Text>
+                            <View style={styles.statValueRow}>
+                                <Text style={styles.statValue}>{stat.value}</Text>
+                                <Text style={styles.statUnit}>{stat.unit}</Text>
+                            </View>
+                            <Text style={[styles.statChange, stat.positive ? styles.positive : styles.negative]}>{stat.change}</Text>
+                        </View>
                     ))}
-                </div>
-            </div>
+                </View>
+            </ScrollView>
 
             <BottomNav />
-        </div>
+        </View>
     );
 }
+
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <View style={styles.chartCard}>
+            <Text style={styles.chartTitle}>{title}</Text>
+            <View style={styles.chartFrame}>{children}</View>
+        </View>
+    );
+}
+
+function LineChart({ data, color }: { data: Array<{ date: string; weight: number }>; color: string }) {
+    const values = data.map((item) => Number(item.weight || 0));
+    const min = Math.min(...values, 0);
+    const max = Math.max(...values, 1);
+    const range = Math.max(1, max - min);
+
+    return (
+        <View style={styles.chartArea}>
+            <View style={styles.linePlot}>
+                {data.map((item, index) => {
+                    const x = data.length > 1 ? (index / (data.length - 1)) * 100 : 50;
+                    const y = 100 - ((Number(item.weight || 0) - min) / range) * 100;
+                    return <View key={`${item.date}-${index}`} style={[styles.lineDot, { left: `${x}%`, top: `${y}%`, backgroundColor: color }]} />;
+                })}
+                {data.map((item, index) => {
+                    if (index === data.length - 1) return null;
+                    const x1 = (index / (data.length - 1)) * 100;
+                    const x2 = ((index + 1) / (data.length - 1)) * 100;
+                    const y1 = 100 - ((Number(item.weight || 0) - min) / range) * 100;
+                    const y2 = 100 - ((Number(data[index + 1].weight || 0) - min) / range) * 100;
+                    const width = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+                    const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+                    return <View key={`${item.date}-${index}-line`} style={[styles.lineSegment, { left: `${x1}%`, top: `${y1}%`, width: `${width}%`, transform: [{ rotate: `${angle}deg` }], backgroundColor: color }]} />;
+                })}
+            </View>
+            <View style={styles.axisRow}>
+                {data.map((item, index) => (
+                    <Text key={`${item.date}-${index}`} style={styles.axisLabel}>{item.date}</Text>
+                ))}
+            </View>
+        </View>
+    );
+}
+
+function BarChart({ data, color }: { data: Array<{ date: string; amount: number }>; color: string }) {
+    const values = data.map((item) => Number(item.amount || 0));
+    const max = Math.max(...values, 1);
+
+    return (
+        <View style={styles.chartArea}>
+            <View style={styles.barPlot}>
+                {data.map((item, index) => (
+                    <View key={`${item.date}-${index}`} style={styles.barColumn}>
+                        <View style={[styles.barFill, { height: `${(Number(item.amount || 0) / max) * 100}%`, backgroundColor: color }]} />
+                    </View>
+                ))}
+            </View>
+            <View style={styles.axisRow}>
+                {data.map((item, index) => (
+                    <Text key={`${item.date}-${index}`} style={styles.axisLabel}>{item.date}</Text>
+                ))}
+            </View>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    root: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 12,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: colors.mutedSoft,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    content: {
+        paddingHorizontal: 20,
+        paddingBottom: 124,
+        gap: 14,
+    },
+    rangeRow: {
+        flexDirection: "row",
+        gap: 10,
+        marginBottom: 2,
+    },
+    rangePill: {
+        flex: 1,
+        paddingVertical: 11,
+        borderRadius: 14,
+        backgroundColor: colors.mutedSoft,
+        alignItems: "center",
+    },
+    rangePillActive: {
+        backgroundColor: colors.primary,
+    },
+    rangeText: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: colors.muted,
+    },
+    rangeTextActive: {
+        color: "#FFFFFF",
+    },
+    chartCard: {
+        borderRadius: 24,
+        backgroundColor: colors.card,
+        padding: 18,
+        ...shadow,
+    },
+    chartTitle: {
+        marginBottom: 12,
+        fontSize: 14,
+        fontWeight: "700",
+        color: colors.foreground,
+    },
+    chartFrame: {
+        height: 180,
+    },
+    chartArea: {
+        flex: 1,
+    },
+    linePlot: {
+        flex: 1,
+        position: "relative",
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(148,163,184,0.12)",
+    },
+    lineDot: {
+        position: "absolute",
+        width: 8,
+        height: 8,
+        marginLeft: -4,
+        marginTop: -4,
+        borderRadius: 4,
+    },
+    lineSegment: {
+        position: "absolute",
+        height: 2,
+        transformOrigin: "left center",
+    },
+    axisRow: {
+        marginTop: 10,
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    axisLabel: {
+        flex: 1,
+        textAlign: "center",
+        fontSize: 10,
+        color: colors.muted,
+    },
+    barPlot: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "flex-end",
+        gap: 8,
+        paddingHorizontal: 4,
+    },
+    barColumn: {
+        flex: 1,
+        height: "100%",
+        justifyContent: "flex-end",
+        borderRadius: 12,
+        backgroundColor: "rgba(148,163,184,0.10)",
+        overflow: "hidden",
+    },
+    barFill: {
+        width: "100%",
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+    },
+    grid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 10,
+    },
+    statCard: {
+        width: "48%",
+        borderRadius: 22,
+        backgroundColor: colors.card,
+        padding: 16,
+        ...shadow,
+    },
+    statIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 12,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: colors.muted,
+    },
+    statValueRow: {
+        marginTop: 6,
+        flexDirection: "row",
+        alignItems: "baseline",
+        gap: 4,
+    },
+    statValue: {
+        fontSize: 22,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    statUnit: {
+        fontSize: 12,
+        color: colors.muted,
+    },
+    statChange: {
+        marginTop: 6,
+        fontSize: 12,
+        fontWeight: "600",
+    },
+    positive: {
+        color: colors.primary,
+    },
+    negative: {
+        color: colors.destructive,
+    },
+});

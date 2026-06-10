@@ -1,11 +1,12 @@
-"use client";
-
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 import { useApp } from "../app-context";
 import { BottomNav } from "../bottom-nav";
-import { ArrowLeft, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { colors, shadow } from "../theme";
 
 const genderOptions = [
     { label: "Nam", value: "male" },
@@ -28,7 +29,7 @@ const goalOptions = [
 ];
 
 export function CaloriesScreen() {
-    const { userData, healthData, setScreen, refreshHealth } = useApp();
+    const { userData, healthData, setScreen, refreshHealth, authFetch } = useApp();
     const [height, setHeight] = useState(String(userData?.height ?? ""));
     const [weight, setWeight] = useState(String(userData?.weight ?? ""));
     const [age, setAge] = useState(String(userData?.age ?? ""));
@@ -46,13 +47,9 @@ export function CaloriesScreen() {
         setLoading(true);
 
         try {
-            const token = localStorage.getItem("ft_token");
-            const res = await fetch("http://localhost:5000/api/calories/calculate", {
+            const res = await authFetch("/api/calories/calculate", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     weight: Number(weight),
                     height: Number(height),
@@ -63,11 +60,15 @@ export function CaloriesScreen() {
                 }),
             });
 
-            const body = await res.json();
+            if (!res) {
+                setError("Không thể kết nối máy chủ");
+                return;
+            }
+
+            const body = (await res.json()) as any;
 
             if (!res.ok) {
                 setError(body.message || "Unable to calculate calories");
-                setLoading(false);
                 return;
             }
 
@@ -77,112 +78,259 @@ export function CaloriesScreen() {
                 recommendedCalories: body.data?.recommendedCalories ?? 0,
             });
             await refreshHealth();
-        } catch (err) {
+        } catch (error) {
             // eslint-disable-next-line no-console
-            console.error(err);
+            console.error(error);
             setError("Network error");
+            Toast.show({ type: "error", text1: "Thông báo", text2: "Không thể tính TDEE lúc này" });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="flex h-full flex-col bg-background">
-            <div className="px-5 pb-4 pt-14">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => setScreen("dashboard")} className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                        <ArrowLeft className="h-5 w-5 text-foreground" />
-                    </button>
-                    <h1 className="text-xl font-bold text-foreground">TDEE Calculator</h1>
-                </div>
-            </div>
+        <View style={styles.root}>
+            <View style={styles.header}>
+                <Pressable onPress={() => setScreen("dashboard")} style={styles.backButton}>
+                    <MaterialCommunityIcons name="arrow-left" size={22} color={colors.foreground} />
+                </Pressable>
+                <Text style={styles.headerTitle}>TDEE Calculator</Text>
+            </View>
 
-            <div className="flex-1 overflow-y-auto px-5 pb-28">
-                <div className="mb-4 rounded-3xl bg-gradient-to-br from-primary to-secondary p-6 text-primary-foreground">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-foreground/20">
-                            <Calculator className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm/none text-primary-foreground/80">Calories based on your body and goal</p>
-                            <p className="text-2xl font-bold">{healthData.tdee} kcal/day</p>
-                        </div>
-                    </div>
-                    <p className="mt-4 text-sm text-primary-foreground/80">
-                        Goal: {selectedGoal.label} • Recommended: {healthData.calorieGoal} kcal/day
-                    </p>
-                </div>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <LinearHero tdee={healthData.tdee} goalLabel={selectedGoal.label} calorieGoal={healthData.calorieGoal} />
 
-                <div className="mb-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Nhập dữ liệu</h3>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                            <label className="text-xs font-medium text-muted-foreground">Chiều cao (cm)</label>
-                            <Input value={height} onChange={(e) => setHeight(e.target.value)} type="number" className="mt-1 h-12 rounded-xl border-0 bg-muted" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-muted-foreground">Cân nặng (kg)</label>
-                            <Input value={weight} onChange={(e) => setWeight(e.target.value)} type="number" className="mt-1 h-12 rounded-xl border-0 bg-muted" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-muted-foreground">Tuổi</label>
-                            <Input value={age} onChange={(e) => setAge(e.target.value)} type="number" className="mt-1 h-12 rounded-xl border-0 bg-muted" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-muted-foreground">Giới tính</label>
-                            <select value={gender} onChange={(e) => setGender(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
-                                {genderOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-muted-foreground">Mức độ hoạt động</label>
-                            <select value={activityLevel} onChange={(e) => setActivityLevel(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
-                                {activityOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-muted-foreground">Mục tiêu</label>
-                            <select value={goal} onChange={(e) => setGoal(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none">
-                                {goalOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+                <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>Nhập dữ liệu</Text>
+                    <View style={styles.grid}>
+                        <Field label="Chiều cao (cm)"><Input value={height} onChangeText={setHeight} keyboardType="numeric" style={styles.input} /></Field>
+                        <Field label="Cân nặng (kg)"><Input value={weight} onChangeText={setWeight} keyboardType="numeric" style={styles.input} /></Field>
+                        <Field label="Tuổi"><Input value={age} onChangeText={setAge} keyboardType="numeric" style={styles.input} /></Field>
+                    </View>
 
-                    {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+                    <OptionGroup label="Giới tính" items={genderOptions} selected={gender} onChange={setGender} />
+                    <OptionGroup label="Mức độ hoạt động" items={activityOptions} selected={activityLevel} onChange={setActivityLevel} />
+                    <OptionGroup label="Mục tiêu" items={goalOptions} selected={goal} onChange={setGoal} />
 
-                    <Button onClick={calculateCalories} disabled={loading} className="mt-4 h-12 w-full rounded-xl bg-primary text-primary-foreground">
-                        {loading ? "Đang tính..." : "Tính TDEE"}
-                    </Button>
-                </div>
+                    {error ? <Text style={styles.error}>{error}</Text> : null}
 
-                {result && (
-                    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                        <h3 className="mb-4 text-sm font-semibold text-foreground">Kết quả</h3>
-                        <div className="grid grid-cols-3 gap-3">
-                            <div className="rounded-xl bg-muted p-4">
-                                <p className="text-xs text-muted-foreground">BMR</p>
-                                <p className="mt-1 text-xl font-bold text-foreground">{result.bmr}</p>
-                            </div>
-                            <div className="rounded-xl bg-muted p-4">
-                                <p className="text-xs text-muted-foreground">TDEE</p>
-                                <p className="mt-1 text-xl font-bold text-foreground">{result.tdee}</p>
-                            </div>
-                            <div className="rounded-xl bg-muted p-4">
-                                <p className="text-xs text-muted-foreground">Calo mục tiêu</p>
-                                <p className="mt-1 text-xl font-bold text-foreground">{result.recommendedCalories}</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+                    <Button onPress={calculateCalories} disabled={loading} title={loading ? "Đang tính..." : "Tính TDEE"} style={styles.primaryButton} />
+                </View>
+
+                {result ? (
+                    <View style={styles.card}>
+                        <Text style={styles.sectionTitle}>Kết quả</Text>
+                        <View style={styles.resultRow}>
+                            <ResultTile label="BMR" value={String(result.bmr)} />
+                            <ResultTile label="TDEE" value={String(result.tdee)} />
+                            <ResultTile label="Calo mục tiêu" value={String(result.recommendedCalories)} />
+                        </View>
+                    </View>
+                ) : null}
+            </ScrollView>
 
             <BottomNav />
-        </div>
+        </View>
     );
 }
+
+function LinearHero({ tdee, goalLabel, calorieGoal }: { tdee: number; goalLabel: string; calorieGoal: number }) {
+    return (
+        <View style={styles.hero}>
+            <View style={styles.heroTop}>
+                <View style={styles.heroIcon}>
+                    <MaterialCommunityIcons name="calculator-variant" size={26} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.heroCopy}>Calories based on your body and goal</Text>
+                    <Text style={styles.heroValue}>{tdee} kcal/day</Text>
+                </View>
+            </View>
+            <Text style={styles.heroFooter}>Goal: {goalLabel} • Recommended: {calorieGoal} kcal/day</Text>
+        </View>
+    );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <View style={styles.field}>
+            <Text style={styles.fieldLabel}>{label}</Text>
+            {children}
+        </View>
+    );
+}
+
+function OptionGroup<T extends { label: string; value: string }>({ label, items, selected, onChange }: { label: string; items: T[]; selected: string; onChange: (value: string) => void }) {
+    return (
+        <View style={styles.optionGroup}>
+            <Text style={styles.fieldLabel}>{label}</Text>
+            <View style={styles.optionWrap}>
+                {items.map((item) => {
+                    const active = item.value === selected;
+                    return (
+                        <Pressable key={item.value} onPress={() => onChange(item.value)} style={[styles.optionPill, active && styles.optionPillActive]}>
+                            <Text style={[styles.optionText, active && styles.optionTextActive]}>{item.label}</Text>
+                        </Pressable>
+                    );
+                })}
+            </View>
+        </View>
+    );
+}
+
+function ResultTile({ label, value }: { label: string; value: string }) {
+    return (
+        <View style={styles.resultTile}>
+            <Text style={styles.resultLabel}>{label}</Text>
+            <Text style={styles.resultValue}>{value}</Text>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    root: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 12,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: colors.mutedSoft,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    content: {
+        paddingHorizontal: 20,
+        paddingBottom: 124,
+        gap: 16,
+    },
+    hero: {
+        borderRadius: 28,
+        backgroundColor: colors.primary,
+        padding: 20,
+    },
+    heroTop: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    heroIcon: {
+        width: 52,
+        height: 52,
+        borderRadius: 18,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(255,255,255,0.18)",
+    },
+    heroCopy: {
+        fontSize: 13,
+        color: "rgba(255,255,255,0.82)",
+    },
+    heroValue: {
+        marginTop: 4,
+        fontSize: 24,
+        fontWeight: "800",
+        color: "#FFFFFF",
+    },
+    heroFooter: {
+        marginTop: 16,
+        fontSize: 13,
+        color: "rgba(255,255,255,0.84)",
+    },
+    card: {
+        borderRadius: 24,
+        backgroundColor: colors.card,
+        padding: 18,
+        ...shadow,
+    },
+    sectionTitle: {
+        marginBottom: 14,
+        fontSize: 14,
+        fontWeight: "700",
+        color: colors.foreground,
+    },
+    grid: {
+        gap: 12,
+    },
+    field: {
+        gap: 8,
+    },
+    fieldLabel: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: colors.muted,
+    },
+    input: {
+        backgroundColor: colors.mutedSoft,
+        fontSize: 16,
+    },
+    optionGroup: {
+        marginTop: 14,
+        gap: 8,
+    },
+    optionWrap: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+    },
+    optionPill: {
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 999,
+        backgroundColor: colors.mutedSoft,
+    },
+    optionPillActive: {
+        backgroundColor: colors.primarySoft,
+    },
+    optionText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: colors.foreground,
+    },
+    optionTextActive: {
+        color: colors.primary,
+    },
+    error: {
+        marginTop: 8,
+        fontSize: 13,
+        color: colors.destructive,
+    },
+    primaryButton: {
+        marginTop: 16,
+        backgroundColor: colors.primary,
+    },
+    resultRow: {
+        flexDirection: "row",
+        gap: 10,
+    },
+    resultTile: {
+        flex: 1,
+        borderRadius: 18,
+        backgroundColor: colors.mutedSoft,
+        padding: 14,
+    },
+    resultLabel: {
+        fontSize: 12,
+        color: colors.muted,
+    },
+    resultValue: {
+        marginTop: 8,
+        fontSize: 18,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+});

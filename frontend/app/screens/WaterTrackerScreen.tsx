@@ -1,16 +1,17 @@
-"use client";
-
+import React from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useApp } from "../app-context";
 import { BottomNav } from "../bottom-nav";
-import { ArrowLeft, Plus, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { colors, shadow } from "../theme";
 
 const waterOptions = [
-    { amount: 150, label: "150ml", icon: "🥛" },
-    { amount: 250, label: "250ml", icon: "🥤" },
-    { amount: 350, label: "350ml", icon: "🍶" },
-    { amount: 500, label: "500ml", icon: "🫗" },
-];
+    { amount: 150, label: "150ml", icon: "cup-water" },
+    { amount: 250, label: "250ml", icon: "cup" },
+    { amount: 350, label: "350ml", icon: "water" },
+    { amount: 500, label: "500ml", icon: "water-plus" },
+] as const;
 
 export function WaterTrackerScreen() {
     const { healthData, addWater, setScreen } = useApp();
@@ -18,97 +19,289 @@ export function WaterTrackerScreen() {
     const percentage = Math.round((healthData.waterIntake / healthData.waterGoal) * 100);
     const remaining = Math.max(0, healthData.waterGoal - healthData.waterIntake);
     const waterLevel = Math.min(percentage, 100);
+    const logs = Array.isArray(healthData.waterHistory) ? healthData.waterHistory : [];
 
     return (
-        <div className="flex h-full flex-col bg-background">
-            <div className="px-5 pb-4 pt-14">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => setScreen("dashboard")} className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                        <ArrowLeft className="h-5 w-5 text-foreground" />
-                    </button>
-                    <h1 className="text-xl font-bold text-foreground">Theo dõi nước</h1>
-                </div>
-            </div>
+        <View style={styles.root}>
+            <View style={styles.header}>
+                <Pressable onPress={() => setScreen("dashboard")} style={styles.backButton}>
+                    <MaterialCommunityIcons name="arrow-left" size={22} color={colors.foreground} />
+                </Pressable>
+                <Text style={styles.headerTitle}>Theo dõi nước</Text>
+            </View>
 
-            <div className="flex-1 overflow-y-auto px-5 pb-28">
-                <div className="mb-8 flex flex-col items-center">
-                    <div className="relative mb-4 h-56 w-40">
-                        <div className="absolute inset-0 overflow-hidden rounded-b-[40px] rounded-t-lg border-4 border-secondary/30">
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-secondary to-secondary/70 transition-all duration-500 ease-out" style={{ height: `${waterLevel}%` }}>
-                                <div className="absolute top-0 left-0 right-0 h-4 rounded-[100%] bg-secondary/50" />
-                            </div>
-                            {waterLevel > 20 && (
-                                <>
-                                    <div className="absolute bottom-[20%] left-[20%] h-2 w-2 animate-bounce rounded-full bg-primary-foreground/30" />
-                                    <div className="absolute bottom-[40%] right-[30%] h-1.5 w-1.5 animate-bounce rounded-full bg-primary-foreground/30" style={{ animationDelay: "100ms" }} />
-                                    <div className="absolute bottom-[30%] left-[40%] h-1 w-1 animate-bounce rounded-full bg-primary-foreground/30" style={{ animationDelay: "200ms" }} />
-                                </>
-                            )}
-                        </div>
-                        <Droplets className="absolute -top-2 left-1/2 h-8 w-8 -translate-x-1/2 text-secondary" />
-                    </div>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <View style={styles.meterSection}>
+                    <View style={styles.bottleWrap}>
+                        <View style={styles.bottle}>
+                            <View style={[styles.waterFill, { height: `${waterLevel}%` }]}>
+                                <View style={styles.wave} />
+                            </View>
+                            {waterLevel > 20 ? <View style={styles.bubble1} /> : null}
+                            {waterLevel > 20 ? <View style={styles.bubble2} /> : null}
+                            {waterLevel > 20 ? <View style={styles.bubble3} /> : null}
+                        </View>
+                        <MaterialCommunityIcons name="water-outline" size={34} color={colors.secondary} style={styles.bottleIcon} />
+                    </View>
 
-                    <div className="text-center">
-                        <p className="text-4xl font-bold text-foreground">{healthData.waterIntake}ml</p>
-                        <p className="mt-1 text-sm text-muted-foreground">trong mục tiêu hàng ngày {healthData.waterGoal}ml</p>
-                    </div>
+                    <Text style={styles.amount}>{healthData.waterIntake}ml</Text>
+                    <Text style={styles.subtitle}>trong mục tiêu hàng ngày {healthData.waterGoal}ml</Text>
 
-                    <div className="mt-4 flex items-center gap-6">
-                        <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-secondary" />
-                            <span className="text-sm font-medium text-foreground">{percentage}% hoàn thành</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-muted" />
-                            <span className="text-sm text-muted-foreground">{remaining}ml còn lại</span>
-                        </div>
-                    </div>
-                </div>
+                    <View style={styles.summaryRow}>
+                        <View style={styles.summaryItem}>
+                            <View style={[styles.summaryDot, { backgroundColor: colors.secondary }]} />
+                            <Text style={styles.summaryText}>{percentage}% hoàn thành</Text>
+                        </View>
+                        <View style={styles.summaryItem}>
+                            <View style={[styles.summaryDot, { backgroundColor: colors.muted }]} />
+                            <Text style={styles.summarySecondary}>{remaining}ml còn lại</Text>
+                        </View>
+                    </View>
+                </View>
 
-                <div className="mb-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Thêm nhanh</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>Thêm nhanh</Text>
+                    <View style={styles.quickGrid}>
                         {waterOptions.map((option) => (
-                            <Button key={option.amount} variant="outline" onClick={async () => await addWater(option.amount)} className="flex h-16 flex-col gap-1 rounded-xl border-border hover:border-secondary hover:bg-secondary/10">
-                                <span className="text-xl">{option.icon}</span>
-                                <span className="text-sm font-medium text-foreground">{option.label}</span>
+                            <Button key={option.amount} variant="outline" onPress={() => addWater(option.amount)} style={styles.quickButton} contentStyle={styles.quickContent}>
+                                <MaterialCommunityIcons name={option.icon as any} size={24} color={colors.secondary} />
+                                <Text style={styles.quickLabel}>{option.label}</Text>
                             </Button>
                         ))}
-                    </div>
-                </div>
+                    </View>
+                </View>
 
-                <Button onClick={() => addWater(100)} className="h-14 w-full rounded-xl bg-secondary font-semibold text-secondary-foreground hover:bg-secondary/90">
-                    <Plus className="mr-2 h-5 w-5" />
-                    Thêm lượng tùy chỉnh
-                </Button>
+                <Button onPress={() => addWater(100)} title="Thêm lượng tùy chỉnh" style={styles.customButton} contentStyle={styles.customContent} />
 
-                <div className="mt-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Nhật ký hôm nay</h3>
-                    <div className="space-y-3">
-                        {(() => {
-                            const logs = Array.isArray(healthData.waterHistory)
-                                ? healthData.waterHistory
-                                : healthData.waterHistory && Array.isArray((healthData as any).waterHistory?.recentEntries)
-                                    ? (healthData as any).waterHistory.recentEntries
-                                    : [];
-
-                            return logs.map((log: any, index: number) => (
-                                <div key={index} className="flex items-center justify-between border-b border-border py-2 last:border-0">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/10">
-                                            <Droplets className="h-4 w-4 text-secondary" />
-                                        </div>
-                                        <span className="text-sm text-muted-foreground">{log.date}</span>
-                                    </div>
-                                    <span className="text-sm font-semibold text-foreground">+{log.amount}ml</span>
-                                </div>
-                            ));
-                        })()}
-                    </div>
-                </div>
-            </div>
+                <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>Nhật ký hôm nay</Text>
+                    <View style={styles.logList}>
+                        {logs.map((log: any, index: number) => (
+                            <View key={`${log.date}-${index}`} style={styles.logRow}>
+                                <View style={styles.logLeft}>
+                                    <View style={styles.logIcon}>
+                                        <MaterialCommunityIcons name="water-outline" size={18} color={colors.secondary} />
+                                    </View>
+                                    <Text style={styles.logDate}>{log.date}</Text>
+                                </View>
+                                <Text style={styles.logAmount}>+{log.amount}ml</Text>
+                            </View>
+                        ))}
+                        {!logs.length ? <Text style={styles.emptyText}>Chưa có dữ liệu hôm nay.</Text> : null}
+                    </View>
+                </View>
+            </ScrollView>
 
             <BottomNav />
-        </div>
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    root: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 12,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: colors.mutedSoft,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    content: {
+        paddingHorizontal: 20,
+        paddingBottom: 124,
+        gap: 16,
+    },
+    meterSection: {
+        alignItems: "center",
+    },
+    bottleWrap: {
+        width: 160,
+        height: 228,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 12,
+    },
+    bottle: {
+        position: "absolute",
+        inset: 0,
+        width: 144,
+        height: 208,
+        borderRadius: 22,
+        borderWidth: 4,
+        borderColor: "rgba(20, 184, 166, 0.28)",
+        overflow: "hidden",
+        backgroundColor: colors.card,
+    },
+    waterFill: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: colors.secondary,
+    },
+    wave: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 16,
+        backgroundColor: "rgba(255,255,255,0.25)",
+    },
+    bottleIcon: {
+        position: "absolute",
+        top: -6,
+    },
+    bubble1: {
+        position: "absolute",
+        bottom: 44,
+        left: 26,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: "rgba(255,255,255,0.35)",
+    },
+    bubble2: {
+        position: "absolute",
+        bottom: 78,
+        right: 34,
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: "rgba(255,255,255,0.35)",
+    },
+    bubble3: {
+        position: "absolute",
+        bottom: 58,
+        left: 58,
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: "rgba(255,255,255,0.35)",
+    },
+    amount: {
+        fontSize: 40,
+        fontWeight: "800",
+        color: colors.foreground,
+    },
+    subtitle: {
+        marginTop: 6,
+        fontSize: 14,
+        color: colors.muted,
+    },
+    summaryRow: {
+        marginTop: 16,
+        flexDirection: "row",
+        gap: 16,
+    },
+    summaryItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    summaryDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+    },
+    summaryText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: colors.foreground,
+    },
+    summarySecondary: {
+        fontSize: 13,
+        color: colors.muted,
+    },
+    card: {
+        borderRadius: 24,
+        backgroundColor: colors.card,
+        padding: 18,
+        ...shadow,
+    },
+    sectionTitle: {
+        marginBottom: 12,
+        fontSize: 14,
+        fontWeight: "700",
+        color: colors.foreground,
+    },
+    quickGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 10,
+    },
+    quickButton: {
+        width: "48%",
+        minHeight: 72,
+        borderRadius: 18,
+        borderColor: colors.border,
+    },
+    quickContent: {
+        flexDirection: "column",
+        gap: 6,
+    },
+    quickLabel: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: colors.foreground,
+    },
+    customButton: {
+        backgroundColor: colors.secondary,
+    },
+    customContent: {
+        gap: 8,
+    },
+    logList: {
+        gap: 10,
+    },
+    logRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(148,163,184,0.12)",
+    },
+    logLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
+    logIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        backgroundColor: colors.secondarySoft,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    logDate: {
+        fontSize: 13,
+        color: colors.muted,
+    },
+    logAmount: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: colors.foreground,
+    },
+    emptyText: {
+        fontSize: 13,
+        color: colors.muted,
+    },
+});

@@ -1,6 +1,10 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import Toast from "react-native-toast-message";
+import { useApp } from "../app-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { colors, shadow } from "../theme";
 
 type Setting = {
     enabled?: boolean;
@@ -9,16 +13,8 @@ type Setting = {
     endTime?: string;
 };
 
-function getAuthHeaders() {
-    const t = typeof window !== "undefined" ? localStorage.getItem("ft_token") : null;
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (t) {
-        headers.Authorization = `Bearer ${t}`;
-    }
-    return headers;
-}
-
-export function NotificationSettings({ onClose }: { onClose: () => void }) {
+export function NotificationSettings({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+    const { authFetch } = useApp();
     const [loading, setLoading] = useState(false);
     const [setting, setSetting] = useState<Setting>({ enabled: true, intervalHours: 3, startTime: "08:00", endTime: "22:00" });
     const [error, setError] = useState<string | null>(null);
@@ -26,55 +22,75 @@ export function NotificationSettings({ onClose }: { onClose: () => void }) {
 
     useEffect(() => {
         let mounted = true;
+
         async function load() {
             setLoading(true);
             try {
-                const res = await fetch("http://localhost:5000/api/notification", { headers: getAuthHeaders() });
-                if (!res.ok) {
-                    setLoading(false);
+                const res = await authFetch("/api/notification");
+                if (!res) {
                     return;
                 }
-                const body = await res.json();
+
+                if (!res.ok) {
+                    return;
+                }
+
+                const body = (await res.json()) as any;
                 if (mounted && body && body.data && body.data.setting) {
                     setSetting(body.data.setting);
                 }
-            } catch (err) {
+            } catch (error) {
                 // eslint-disable-next-line no-console
-                console.error(err);
+                console.error(error);
             } finally {
                 setLoading(false);
             }
         }
 
-        load();
+        if (visible) {
+            void load();
+        }
+
         return () => {
             mounted = false;
         };
-    }, []);
+    }, [authFetch, visible]);
 
     async function save() {
         setLoading(true);
         setError(null);
         setSuccess(null);
         try {
-            const res = await fetch("http://localhost:5000/api/notification", {
+            const res = await authFetch("/api/notification", {
                 method: "POST",
-                headers: getAuthHeaders(),
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(setting),
             });
-            if (!res.ok) {
-                const b = await res.json().catch(() => ({}));
-                setError(b.message || "Lưu thất bại");
-                setLoading(false);
+
+            if (!res) {
+                setError("Lỗi mạng");
+                Toast.show({ type: "error", text1: "Thông báo", text2: "Không thể kết nối máy chủ" });
                 return;
             }
-            setLoading(false);
-            setSuccess("Đã lưu cài đặt thông báo");
+
+            if (!res.ok) {
+                const body = (await res.json().catch(() => ({}))) as any;
+                const message = body.message || "Lưu thất bại";
+                setError(message);
+                Toast.show({ type: "error", text1: "Thông báo", text2: message });
+                return;
+            }
+
+            const message = "Đã lưu cài đặt thông báo";
+            setSuccess(message);
+            Toast.show({ type: "success", text1: "Thông báo", text2: message });
             onClose();
-        } catch (err) {
+        } catch (error) {
             // eslint-disable-next-line no-console
-            console.error(err);
+            console.error(error);
             setError("Lỗi mạng");
+            Toast.show({ type: "error", text1: "Thông báo", text2: "Lỗi mạng" });
+        } finally {
             setLoading(false);
         }
     }
@@ -84,17 +100,24 @@ export function NotificationSettings({ onClose }: { onClose: () => void }) {
         setError(null);
         setSuccess(null);
         try {
-            const res = await fetch("http://localhost:5000/api/notification", { method: "DELETE", headers: getAuthHeaders() });
-            if (!res.ok) {
-                setLoading(false);
+            const res = await authFetch("/api/notification", { method: "DELETE" });
+            if (!res || !res.ok) {
+                const message = "Không thể xóa cài đặt";
+                setError(message);
+                Toast.show({ type: "error", text1: "Thông báo", text2: message });
                 return;
             }
-            setLoading(false);
-            setSuccess("Đã xóa cài đặt thông báo");
+
+            const message = "Đã xóa cài đặt thông báo";
+            setSuccess(message);
+            Toast.show({ type: "success", text1: "Thông báo", text2: message });
             onClose();
-        } catch (err) {
+        } catch (error) {
             // eslint-disable-next-line no-console
-            console.error(err);
+            console.error(error);
+            setError("Lỗi mạng");
+            Toast.show({ type: "error", text1: "Thông báo", text2: "Lỗi mạng" });
+        } finally {
             setLoading(false);
         }
     }
@@ -104,68 +127,162 @@ export function NotificationSettings({ onClose }: { onClose: () => void }) {
         setError(null);
         setSuccess(null);
         try {
-            const res = await fetch("http://localhost:5000/api/notification/test-email", {
-                method: "POST",
-                headers: getAuthHeaders(),
-            });
-            const body = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                setError(body.message || "Không thể gửi email kiểm tra");
-            } else {
-                setSuccess(body.message || "Email kiểm tra đã gửi");
+            const res = await authFetch("/api/notification/test-email", { method: "POST" });
+            if (!res) {
+                setError("Lỗi mạng");
+                Toast.show({ type: "error", text1: "Thông báo", text2: "Không thể kết nối máy chủ" });
+                return;
             }
-        } catch (err) {
+
+            const body = (await res.json().catch(() => ({}))) as any;
+            if (!res.ok) {
+                const message = body.message || "Không thể gửi email kiểm tra";
+                setError(message);
+                Toast.show({ type: "error", text1: "Thông báo", text2: message });
+            } else {
+                const message = body.message || "Email kiểm tra đã gửi";
+                setSuccess(message);
+                Toast.show({ type: "success", text1: "Thông báo", text2: message });
+            }
+        } catch (error) {
             // eslint-disable-next-line no-console
-            console.error(err);
+            console.error(error);
             setError("Lỗi mạng");
+            Toast.show({ type: "error", text1: "Thông báo", text2: "Lỗi mạng" });
         } finally {
             setLoading(false);
         }
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="w-[min(640px,95%)] rounded-2xl bg-card p-6">
-                <h3 className="mb-4 text-lg font-semibold">Cài đặt thông báo</h3>
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+            <View style={styles.backdrop}>
+                <View style={styles.card}>
+                    <Text style={styles.title}>Cài đặt thông báo</Text>
 
-                <div className="mb-3 flex items-center justify-between">
-                    <label className="text-sm">Bật</label>
-                    <input type="checkbox" checked={!!setting.enabled} onChange={(e) => setSetting({ ...setting, enabled: e.target.checked })} />
-                </div>
+                    <View style={styles.row}>
+                        <Text style={styles.label}>Bật</Text>
+                        <Switch value={!!setting.enabled} onValueChange={(value) => setSetting((current) => ({ ...current, enabled: value }))} />
+                    </View>
 
-                <div className="mb-3">
-                    <label className="text-sm">Khoảng (giờ)</label>
-                    <input className="ml-3 w-20 rounded border px-2 py-1" type="number" min={1} value={setting.intervalHours ?? 3} onChange={(e) => setSetting({ ...setting, intervalHours: Number(e.target.value) })} />
-                </div>
+                    <View style={styles.field}>
+                        <Text style={styles.label}>Khoảng (giờ)</Text>
+                        <Input value={String(setting.intervalHours ?? 3)} onChangeText={(text) => setSetting((current) => ({ ...current, intervalHours: Number(text) }))} keyboardType="numeric" style={styles.input} />
+                    </View>
 
-                <div className="mb-3 flex gap-4">
-                    <div>
-                        <label className="text-sm">Giờ bắt đầu</label>
-                        <input className="ml-3 rounded border px-2 py-1" type="time" value={setting.startTime ?? "08:00"} onChange={(e) => setSetting({ ...setting, startTime: e.target.value })} />
-                    </div>
-                    <div>
-                        <label className="text-sm">Giờ kết thúc</label>
-                        <input className="ml-3 rounded border px-2 py-1" type="time" value={setting.endTime ?? "22:00"} onChange={(e) => setSetting({ ...setting, endTime: e.target.value })} />
-                    </div>
-                </div>
+                    <View style={styles.rowGap}>
+                        <View style={styles.fieldHalf}>
+                            <Text style={styles.label}>Giờ bắt đầu</Text>
+                            <Input value={setting.startTime ?? "08:00"} onChangeText={(text) => setSetting((current) => ({ ...current, startTime: text }))} style={styles.input} />
+                        </View>
+                        <View style={styles.fieldHalf}>
+                            <Text style={styles.label}>Giờ kết thúc</Text>
+                            <Input value={setting.endTime ?? "22:00"} onChangeText={(text) => setSetting((current) => ({ ...current, endTime: text }))} style={styles.input} />
+                        </View>
+                    </View>
 
-                {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
-                {success && <p className="mb-2 text-sm text-green-600">{success}</p>}
+                    {error ? <Text style={styles.error}>{error}</Text> : null}
+                    {success ? <Text style={styles.success}>{success}</Text> : null}
 
-                <div className="mt-4 flex justify-end gap-3">
-                    <button className="rounded-md border px-4 py-2" onClick={sendTestEmail} disabled={loading}>
-                        Gửi email thử
-                    </button>
-                    <button className="rounded-md border px-4 py-2" onClick={removeSetting} disabled={loading}>
-                        Xóa
-                    </button>
-                    <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground" onClick={save} disabled={loading}>
-                        Lưu
-                    </button>
-                </div>
-            </div>
-        </div>
+                    <View style={styles.actions}>
+                        <Button variant="outline" onPress={sendTestEmail} title={loading ? "..." : "Gửi email thử"} style={styles.actionButton} />
+                        <Button variant="outline" onPress={removeSetting} title="Xóa" style={styles.actionButton} />
+                        <Button onPress={save} title="Lưu" style={styles.actionButtonPrimary} />
+                    </View>
+
+                    {loading ? <ActivityIndicator color={colors.primary} style={styles.spinner} /> : null}
+                    <Pressable onPress={onClose} style={styles.closeButton}>
+                        <Text style={styles.closeText}>Đóng</Text>
+                    </Pressable>
+                </View>
+            </View>
+        </Modal>
     );
 }
 
 export default NotificationSettings;
+
+const styles = StyleSheet.create({
+    backdrop: {
+        flex: 1,
+        backgroundColor: "rgba(15,23,42,0.46)",
+        justifyContent: "center",
+        padding: 20,
+    },
+    card: {
+        borderRadius: 24,
+        backgroundColor: colors.card,
+        padding: 18,
+        ...shadow,
+    },
+    title: {
+        fontSize: 18,
+        fontWeight: "800",
+        color: colors.foreground,
+        marginBottom: 14,
+    },
+    row: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 12,
+    },
+    rowGap: {
+        flexDirection: "row",
+        gap: 10,
+    },
+    field: {
+        gap: 8,
+        marginBottom: 12,
+    },
+    fieldHalf: {
+        flex: 1,
+        gap: 8,
+    },
+    label: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: colors.muted,
+    },
+    input: {
+        backgroundColor: colors.mutedSoft,
+    },
+    error: {
+        marginTop: 4,
+        fontSize: 13,
+        color: colors.destructive,
+    },
+    success: {
+        marginTop: 4,
+        fontSize: 13,
+        color: colors.success,
+    },
+    actions: {
+        marginTop: 14,
+        flexDirection: "row",
+        gap: 8,
+        flexWrap: "wrap",
+    },
+    actionButton: {
+        flexGrow: 1,
+        flexBasis: "30%",
+    },
+    actionButtonPrimary: {
+        flexGrow: 1,
+        flexBasis: "30%",
+        backgroundColor: colors.primary,
+    },
+    spinner: {
+        marginTop: 12,
+    },
+    closeButton: {
+        marginTop: 12,
+        alignSelf: "flex-end",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    closeText: {
+        color: colors.primary,
+        fontWeight: "700",
+    },
+});
