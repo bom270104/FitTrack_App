@@ -78,7 +78,7 @@ export function LoginScreen() {
                         <Text style={styles.socialText}>G</Text>
                     </Pressable>
                     <Pressable onPress={() => Toast.show({ type: "info", text1: "Thông báo", text2: "Apple login is not implemented in this demo." })} style={styles.socialButton}>
-                        <Text style={styles.socialText}></Text>
+                        <Text style={styles.socialText}>A</Text>
                     </Pressable>
                 </View>
             </View>
@@ -213,7 +213,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "center",
         alignItems: "center",
-        marginTop: 20,
     },
     footerText: {
         fontSize: 14,
