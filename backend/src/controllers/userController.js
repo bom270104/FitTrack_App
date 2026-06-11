@@ -1,5 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess } from "../utils/apiResponse.js";
+import { calculateBmiRecord } from "../services/bmiService.js";
 import { getUserProfile, updateUserProfile } from "../services/userService.js";
 import { validateProfileUpdateInput } from "../validations/user.validation.js";
 
@@ -26,10 +27,25 @@ export const updateProfile = asyncHandler(
   async (req, res) => {
     const updates = validateProfileUpdateInput(req.body);
     const user = await updateUserProfile(req.user._id, updates);
+    let bmi = null;
+
+    const shouldCalculateBmi =
+      updates.height !== undefined || updates.weight !== undefined;
+
+    if (
+      shouldCalculateBmi &&
+      Number.isFinite(user.height) &&
+      Number.isFinite(user.weight)
+    ) {
+      bmi = await calculateBmiRecord(req.user._id, {
+        height: user.height,
+        weight: user.weight,
+      });
+    }
 
     return sendSuccess(res, {
       message: "Profile updated successfully",
-      data: { user },
+      data: { user, bmi },
     });
   },
 );

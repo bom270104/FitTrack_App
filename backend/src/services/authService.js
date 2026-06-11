@@ -1,3 +1,4 @@
+// @ts-nocheck
 import User from "../models/User.js";
 import { AppError } from "../utils/errors.js";
 import { generateToken } from "../utils/jwt.js";
@@ -12,14 +13,17 @@ export const registerUser = async (payload) => {
     throw new AppError("Email is already registered", 409);
   }
 
-  // payload chỉ gồm:
-  // fullName
-  // email
-  // password
   const created = await User.create({
     fullName: payload.fullName,
     email: payload.email,
     password: payload.password,
+    age: payload.age,
+    gender: payload.gender,
+    height: payload.height,
+    weight: payload.weight,
+    activityLevel: payload.activityLevel,
+    goal: payload.goal,
+    dailyWaterGoal: payload.dailyWaterGoal,
   });
 
   const user = await User.findById(created._id);
@@ -39,10 +43,7 @@ export const registerUser = async (payload) => {
           "— FitTrack",
       });
     } catch (error) {
-      console.error(
-        "Failed to send welcome email:",
-        error.message || error
-      );
+      console.error("Failed to send welcome email:", error.message || error);
     }
   }
 
@@ -52,10 +53,7 @@ export const registerUser = async (payload) => {
   };
 };
 
-export const loginUser = async ({
-  email,
-  password,
-}) => {
+export const loginUser = async ({ email, password }) => {
   const user = await User.findOne({
     email,
   }).select("+password");
@@ -64,8 +62,7 @@ export const loginUser = async ({
     throw new AppError("Invalid credentials", 401);
   }
 
-  const isPasswordValid =
-    await user.comparePassword(password);
+  const isPasswordValid = await user.comparePassword(password);
 
   if (!isPasswordValid) {
     throw new AppError("Invalid credentials", 401);
@@ -75,9 +72,7 @@ export const loginUser = async ({
     userId: user._id.toString(),
   });
 
-  const sanitizedUser = await User.findById(
-    user._id
-  );
+  const sanitizedUser = await User.findById(user._id);
 
   return {
     user: sanitizedUser,
@@ -85,9 +80,7 @@ export const loginUser = async ({
   };
 };
 
-export const getAuthenticatedUser = async (
-  userId
-) => {
+export const getAuthenticatedUser = async (userId) => {
   const user = await User.findById(userId);
 
   if (!user) {

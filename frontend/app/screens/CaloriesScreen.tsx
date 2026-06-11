@@ -29,7 +29,7 @@ const goalOptions = [
 ];
 
 export function CaloriesScreen() {
-    const { userData, healthData, setScreen, refreshHealth, authFetch } = useApp();
+    const { userData, healthData, setScreen, refreshHealth, authFetch, updateCaloriesResult } = useApp();
     const [height, setHeight] = useState(String(userData?.height ?? ""));
     const [weight, setWeight] = useState(String(userData?.weight ?? ""));
     const [age, setAge] = useState(String(userData?.age ?? ""));
@@ -72,10 +72,17 @@ export function CaloriesScreen() {
                 return;
             }
 
-            setResult({
+            const nextResult = {
                 bmr: body.data?.bmr ?? 0,
                 tdee: body.data?.tdee ?? 0,
                 recommendedCalories: body.data?.recommendedCalories ?? 0,
+            };
+
+            setResult(nextResult);
+            updateCaloriesResult({
+                tdee: nextResult.tdee,
+                calorieGoal: nextResult.recommendedCalories,
+                bmr: nextResult.bmr,
             });
             await refreshHealth();
         } catch (error) {

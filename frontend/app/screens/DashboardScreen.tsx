@@ -24,6 +24,14 @@ export function DashboardScreen() {
     const caloriePercentage = hasCalories && asNumber(healthData.calorieGoal) > 0 ? Math.round((asNumber(healthData.dailyCalories) / asNumber(healthData.calorieGoal)) * 100) : 0;
     const userWeightNum = asNumber(userData?.weight);
     const weightProgress = hasWeightGoal ? Math.round(((userWeightNum - asNumber(healthData.currentWeight)) / Math.max(1, userWeightNum - asNumber(healthData.targetWeight))) * 100) : 0;
+    const calorieDelta = Math.round(asNumber(healthData.calorieGoal) - asNumber(healthData.tdee));
+    const calorieDeltaText = calorieDelta > 0 ? `+${calorieDelta} cal` : `${calorieDelta} cal`;
+    const calorieDeltaLabel =
+        calorieDelta > 0
+            ? "thặng dư để tăng cân"
+            : calorieDelta < 0
+                ? "thâm hụt để giảm cân"
+                : "duy trì cân nặng";
 
     return (
         <View style={styles.root}>
@@ -120,8 +128,8 @@ export function DashboardScreen() {
                             <Text style={styles.energySub}>kcal/ngày (TDEE)</Text>
                         </View>
                         <View style={styles.energyRight}>
-                            <Text style={styles.energyRightValue}>{hasCalories ? "-200 cal" : "-"}</Text>
-                            <Text style={styles.energyRightSub}>{hasCalories ? "thâm hụt để giảm cân" : "Chưa có dữ liệu"}</Text>
+                            <Text style={styles.energyRightValue}>{hasCalories ? calorieDeltaText : "-"}</Text>
+                            <Text style={styles.energyRightSub}>{hasCalories ? calorieDeltaLabel : "Chưa có dữ liệu"}</Text>
                         </View>
                     </View>
                     <Pressable onPress={() => setScreen("calories")} style={styles.tdeeButton}>

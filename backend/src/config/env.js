@@ -13,7 +13,7 @@ const env = {
   databaseUrl:
     process.env.DATABASE_URL ||
     process.env.MONGODB_URI ||
-    "mongodb://127.0.0.1:27017/fittrack",
+    "mongodb://127.0.0.1:27017/FitTrack",
   jwtSecret: process.env.JWT_SECRET || "fittrack-development-secret",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   corsOrigin: process.env.CORS_ORIGIN || "",
