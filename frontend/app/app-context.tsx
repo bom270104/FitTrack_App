@@ -54,6 +54,7 @@ type AppContextValue = {
     postBmi: (payload: { height: number; weight: number; bmi: number }) => Promise<boolean>;
     updateProfile: (payload: Partial<UserData>) => Promise<boolean>;
     updateWeight: (weight: number) => void;
+    updateCaloriesResult: (payload: { tdee: number; calorieGoal: number; bmr?: number }) => void;
     addWater: (amount: number) => Promise<void>;
     refreshHealth: () => Promise<void>;
     loading: boolean;
@@ -63,6 +64,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:5000";
 const TOKEN_KEY = "ft_token";
+const DEFAULT_WATER_GOAL = 2000;
 
 function isFiniteNumber(value: unknown): value is number {
     return typeof value === "number" && Number.isFinite(value);
@@ -95,7 +97,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         calorieGoal: 0,
         dailyCalories: 0,
         waterIntake: 0,
-        waterGoal: 0,
+        waterGoal: DEFAULT_WATER_GOAL,
         weightHistory: [],
         waterHistory: [],
     });
@@ -153,10 +155,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             if (user) {
                 setUserData(normalizeUser(user));
 
-                if (isFiniteNumber(user.weight)) {
+                if (isFiniteNumber(user.weight) || isFiniteNumber(user.dailyWaterGoal)) {
                     setHealthData((current) => ({
                         ...current,
-                        currentWeight: user.weight,
+                        currentWeight: isFiniteNumber(user.weight) ? user.weight : current.currentWeight,
+                        waterGoal: isFiniteNumber(user.dailyWaterGoal) ? user.dailyWaterGoal : current.waterGoal,
                     }));
                 }
 
@@ -283,6 +286,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
     }
 
+    function updateCaloriesResult(payload: { tdee: number; calorieGoal: number; bmr?: number }) {
+        setHealthData((current) => ({
+            ...current,
+            tdee: payload.tdee,
+            calorieGoal: payload.calorieGoal,
+        }));
+    }
+
     async function addWater(amount: number) {
         try {
             const res = await fetchWithAuth("/api/water", {
@@ -339,10 +350,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     async function updateProfile(payload: Partial<UserData>) {
         try {
-            const res = await fetchWithAuth("/api/users/profile", {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
+            const profilePayload = Object.fromEntries(
+                Object.entries({
                     fullName: payload.name,
                     age: payload.age,
                     gender: payload.gender,
@@ -351,7 +360,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                     activityLevel: payload.activityLevel,
                     goal: payload.goal,
                     dailyWaterGoal: payload.dailyWaterGoal,
-                }),
+                }).filter(([, value]) => value !== undefined),
+            );
+
+            const res = await fetchWithAuth("/api/users/profile", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(profilePayload),
             });
 
             if (!res || !res.ok) {
@@ -360,6 +375,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
             const body: any = await res.json();
             const updated = body?.data?.user || body?.data || {};
+            const bmiResult = body?.data?.bmi;
 
             setUserData((current) => ({
                 name: updated.fullName || updated.name || current?.name || "",
@@ -373,14 +389,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 dailyWaterGoal: isFiniteNumber(updated.dailyWaterGoal) ? updated.dailyWaterGoal : current?.dailyWaterGoal,
             }));
 
-            if (typeof updated.height === "number" && typeof updated.weight === "number") {
-                const nextBmi = Number((updated.weight / Math.pow(updated.height / 100, 2)).toFixed(1));
-                setHealthData((current) => ({
+            setHealthData((current) => {
+                const next = {
                     ...current,
-                    currentWeight: updated.weight,
-                    bmi: nextBmi,
-                }));
-            }
+                    waterGoal: isFiniteNumber(updated.dailyWaterGoal) ? updated.dailyWaterGoal : current.waterGoal,
+                };
+
+                if (isFiniteNumber(bmiResult?.bmi) && isFiniteNumber(updated.weight)) {
+                    return {
+                        ...next,
+                        currentWeight: updated.weight,
+                        bmi: bmiResult.bmi,
+                    };
+                }
+
+                if (typeof updated.height === "number" && typeof updated.weight === "number") {
+                    const nextBmi = Number((updated.weight / Math.pow(updated.height / 100, 2)).toFixed(1));
+                    return {
+                        ...next,
+                        currentWeight: updated.weight,
+                        bmi: nextBmi,
+                    };
+                }
+
+                return next;
+            });
 
             await fetchHealth();
             return true;
@@ -407,7 +440,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             calorieGoal: 0,
             dailyCalories: 0,
             waterIntake: 0,
-            waterGoal: 0,
+            waterGoal: DEFAULT_WATER_GOAL,
             weightHistory: [],
             waterHistory: [],
         });
@@ -456,6 +489,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         postBmi,
         updateProfile,
         updateWeight,
+        updateCaloriesResult,
         addWater,
         refreshHealth,
     };

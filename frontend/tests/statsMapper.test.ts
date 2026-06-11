@@ -31,4 +31,29 @@ describe('mapDashboardToHealthData', () => {
         expect(out.waterIntake).toBe(current.waterIntake);
         expect(out.currentWeight).toBe(current.currentWeight);
     });
+
+    it('keeps current bmi when dashboard has no bmi value yet', () => {
+        const dashboard = { bmi: { latest: null, recentEntries: [] } };
+        const current = { bmi: 24.2, weightHistory: [], waterHistory: [], waterIntake: 0, tdee: 0, calorieGoal: 0, currentWeight: 70 };
+
+        const out = mapDashboardToHealthData(dashboard, current);
+        expect(out.bmi).toBe(24.2);
+        expect(out.currentWeight).toBe(70);
+    });
+
+    it('maps latest calories result for home TDEE display', () => {
+        const dashboard = {
+            calories: {
+                latest: {
+                    tdee: 2400,
+                    recommendedCalories: 2100,
+                },
+            },
+        };
+        const current = { bmi: 0, weightHistory: [], waterHistory: [], waterIntake: 0, tdee: 0, calorieGoal: 0, currentWeight: 0 };
+
+        const out = mapDashboardToHealthData(dashboard, current);
+        expect(out.tdee).toBe(2400);
+        expect(out.calorieGoal).toBe(2100);
+    });
 });
