@@ -98,20 +98,46 @@ export function BMIScreen() {
 }
 
 function LinearHero({ bmi, category, indicatorPosition }: { bmi: number; category: string; indicatorPosition: number }) {
+    const [trackLayout, setTrackLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
+    const DOT_SIZE = 18;
+    const DOT_HALF = DOT_SIZE / 2;
+    const indicatorTop = trackLayout ? trackLayout.y + trackLayout.height / 2 - DOT_HALF : 19;
+
+    // map bmi to visual tick positions (ticks are evenly spaced on the track)
+    const mapBmiToPercent = (value: number) => {
+        const ticks = [15, 18.5, 25, 30, 40];
+        const positions = [0, 25, 50, 75, 100];
+        if (!Number.isFinite(value)) return 0;
+        if (value <= ticks[0]) return positions[0];
+        if (value >= ticks[ticks.length - 1]) return positions[positions.length - 1];
+        for (let i = 0; i < ticks.length - 1; i++) {
+            const a = ticks[i];
+            const b = ticks[i + 1];
+            if (value >= a && value <= b) {
+                const frac = (value - a) / (b - a);
+                return positions[i] + frac * (positions[i + 1] - positions[i]);
+            }
+        }
+        return 0;
+    };
+
+    const posPercent = mapBmiToPercent(bmi);
+    const leftPx = trackLayout ? Math.max(trackLayout.x, Math.min(trackLayout.x + trackLayout.width - DOT_SIZE, trackLayout.x + (posPercent / 100) * trackLayout.width - DOT_HALF)) : undefined;
+
     return (
         <View style={styles.heroOuter}>
             <View style={styles.hero}>
                 <Text style={styles.heroLabel}>BMI của bạn</Text>
                 <Text style={styles.heroValue}>{bmi > 0 ? bmi.toFixed(1) : "-"}</Text>
                 <Text style={styles.heroCategory}>{category}</Text>
-
-                <View style={styles.scaleTrack}>
-                    <View style={[styles.scaleSegment, { backgroundColor: colors.secondary }]} />
-                    <View style={[styles.scaleSegment, { backgroundColor: colors.primary }]} />
-                    <View style={[styles.scaleSegment, { backgroundColor: colors.accent }]} />
-                    <View style={[styles.scaleSegment, { backgroundColor: colors.destructive }]} />
+                <View style={styles.scaleTrack} onLayout={(e) => setTrackLayout(e.nativeEvent.layout)}>
+                    <View style={[styles.scaleSegment, { backgroundColor: "#BEEAD5" }]} />
+                    <View style={[styles.scaleSegment, { backgroundColor: "#7FD3C8" }]} />
+                    <View style={[styles.scaleSegment, { backgroundColor: "#FFD28A" }]} />
+                    <View style={[styles.scaleSegment, { backgroundColor: "#FF8A8A" }]} />
                 </View>
-                <View style={[styles.indicator, { left: `${indicatorPosition}%` }]} />
+                <View style={[styles.indicator, { left: leftPx ?? `${posPercent}%`, top: indicatorTop }]} />
                 <View style={styles.scaleLabels}>
                     <Text style={styles.scaleLabel}>15</Text>
                     <Text style={styles.scaleLabel}>18.5</Text>
@@ -195,14 +221,19 @@ const styles = StyleSheet.create({
     },
     indicator: {
         position: "absolute",
-        top: 147,
+        top: 19,
         width: 18,
         height: 18,
-        marginLeft: -9,
+        marginLeft: 0,
         borderRadius: 9,
         borderWidth: 2,
-        borderColor: colors.foreground,
+        borderColor: "rgba(255,255,255,0.9)",
         backgroundColor: "#FFFFFF",
+        shadowColor: "#000",
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
     },
     scaleLabels: {
         marginTop: 10,

@@ -1,6 +1,7 @@
 import BmiHistory from "../models/BmiHistory.js";
 import CaloriesLog from "../models/CaloriesLog.js";
 import WaterLog from "../models/WaterLog.js";
+import MealLog from "../models/MealLog.js";
 
 const toSeries = (logs, valueKey) =>
     logs
@@ -21,6 +22,16 @@ export const getDashboardStats = async (userId) => {
         WaterLog.find({ userId }).sort({ date: -1, createdAt: -1 }).lean(),
     ]);
 
+    // compute today's meal calories total from MealLog (date stored as YYYY-MM-DD string)
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayMealLogs = await MealLog.find({ userId, date: todayStr }).lean();
+    const todayMealTotal = (todayMealLogs || []).reduce((sum, log) => {
+        const foods = Array.isArray(log.foods) ? log.foods : [];
+        return (
+            sum + foods.reduce((s2, f) => s2 + (Number(f.totalCalories) || 0), 0)
+        );
+    }, 0);
+
     return {
         bmi: {
             totalEntries: bmiLogs.length,
@@ -33,6 +44,8 @@ export const getDashboardStats = async (userId) => {
             latest: caloriesLogs[0] || null,
             recentEntries: caloriesLogs.slice(0, 7),
             chart: toSeries(caloriesLogs.slice(0, 14), "recommendedCalories"),
+            // total calories consumed today from meal logs
+            dailyTotal: todayMealTotal,
         },
         water: {
             totalEntries: waterLogs.length,

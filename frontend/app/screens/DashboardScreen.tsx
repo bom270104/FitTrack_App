@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -7,7 +7,7 @@ import { BottomNav } from "../bottom-nav";
 import { colors, shadow } from "../theme";
 
 export function DashboardScreen() {
-    const { userData, healthData, setScreen } = useApp();
+    const { userData, healthData, setScreen, authFetch } = useApp();
 
     const asNumber = (value: any, fallback = 0) => {
         if (value == null) return fallback;
@@ -16,14 +16,59 @@ export function DashboardScreen() {
         return fallback;
     };
 
+    const [overrideWaterGoal, setOverrideWaterGoal] = useState<number | null>(null);
+
+    useEffect(() => {
+        let mounted = true;
+
+        async function loadGoals() {
+            try {
+                if (!authFetch) return;
+                const res = await authFetch("/api/goals");
+                if (!res || !res.ok) return;
+                const body = (await res.json()) as any;
+                const serverGoals = Array.isArray(body.data?.goals) ? body.data.goals : [];
+                for (const g of serverGoals) {
+                    const unit = g.unit ?? "";
+                    const title = String(g.title || "").toLowerCase();
+                    const target = String(g.target || "").toLowerCase();
+                    if (unit === "ml" || title.includes("nước") || title.includes("nuoc") || target.includes("ml")) {
+                        const parsedTarget = Number(String(g.target ?? "").replace(/[^0-9.]/g, ""));
+                        const parsedMax = Number(String(g.max ?? "").replace(/[^0-9.]/g, ""));
+                        const val = Number.isFinite(parsedTarget) && parsedTarget > 1 ? parsedTarget : Number.isFinite(parsedMax) && parsedMax > 1 ? parsedMax : null;
+                        if (mounted && val) {
+                            setOverrideWaterGoal(val);
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                // noop
+            }
+        }
+
+        if (!asNumber(healthData.waterGoal) || asNumber(healthData.waterGoal) <= 1) {
+            void loadGoals();
+        }
+
+        return () => {
+            mounted = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [healthData?.waterGoal]);
+
     const hasBmi = asNumber(healthData.bmi) > 0;
     const hasCalories = asNumber(healthData.calorieGoal) > 0 || asNumber(healthData.dailyCalories) > 0 || asNumber(healthData.tdee) > 0;
-    const hasWater = asNumber(healthData.waterGoal) > 0 || asNumber(healthData.waterIntake) > 0;
+    const effectiveWaterGoal = overrideWaterGoal ?? asNumber(healthData.waterGoal);
+    const hasWater = effectiveWaterGoal > 0 || asNumber(healthData.waterIntake) > 0;
     const hasWeightGoal = asNumber(userData?.weight) > 0 && asNumber(healthData.targetWeight) > 0;
-    const waterPercentage = hasWater && asNumber(healthData.waterGoal) > 0 ? Math.round((asNumber(healthData.waterIntake) / asNumber(healthData.waterGoal)) * 100) : 0;
+    const waterPercentage = hasWater && effectiveWaterGoal > 0 ? Math.round((asNumber(healthData.waterIntake) / effectiveWaterGoal) * 100) : 0;
     const caloriePercentage = hasCalories && asNumber(healthData.calorieGoal) > 0 ? Math.round((asNumber(healthData.dailyCalories) / asNumber(healthData.calorieGoal)) * 100) : 0;
     const userWeightNum = asNumber(userData?.weight);
-    const weightProgress = hasWeightGoal ? Math.round(((userWeightNum - asNumber(healthData.currentWeight)) / Math.max(1, userWeightNum - asNumber(healthData.targetWeight))) * 100) : 0;
+    const currentWeightNum = asNumber(healthData.currentWeight);
+    const targetWeightNum = asNumber(healthData.targetWeight);
+    const totalGoalDifference = targetWeightNum - userWeightNum;
+    const weightProgress = hasWeightGoal && totalGoalDifference !== 0 ? Math.round((currentWeightNum - userWeightNum) / totalGoalDifference * 100) : 0;
     const calorieDelta = Math.round(asNumber(healthData.calorieGoal) - asNumber(healthData.tdee));
     const calorieDeltaText = calorieDelta > 0 ? `+${calorieDelta} cal` : `${calorieDelta} cal`;
     const calorieDeltaLabel =
@@ -91,9 +136,9 @@ export function DashboardScreen() {
                             <Text style={styles.metricTag}>Nước</Text>
                         </View>
                         <Text style={styles.metricValue}>{hasWater ? String(healthData.waterIntake) : "-"}</Text>
-                        <Text style={styles.metricSub}>{hasWater ? `/ ${String(healthData.waterGoal)} ml` : "Chưa có dữ liệu"}</Text>
+                        <Text style={styles.metricSub}>{hasWater ? `/ ${String(effectiveWaterGoal)} ml` : "Chưa có dữ liệu"}</Text>
                         <View style={styles.progressTrack}>
-                            <View style={[styles.progressFill, { width: `${Math.min(waterPercentage, 100)}%`, backgroundColor: colors.secondary }]} />
+                            <View style={[styles.progressFill, { width: `${Math.min(Math.max(waterPercentage, 0), 100)}%`, backgroundColor: colors.secondary }]} />
                         </View>
                     </Pressable>
                 </View>
@@ -121,16 +166,22 @@ export function DashboardScreen() {
                 </Pressable>
 
                 <View style={styles.energyCard}>
-                    <Text style={styles.sectionTitle}>Năng lượng tiêu thụ hàng ngày</Text>
+                    <Text style={styles.sectionTitle}>TDEE & Mục tiêu calo</Text>
                     <View style={styles.energyRow}>
-                        <View>
+                        <View style={styles.energyBlock}>
+                            <Text style={styles.energyLabel}>TDEE</Text>
                             <Text style={styles.energyValue}>{hasCalories ? String(healthData.tdee) : "-"}</Text>
-                            <Text style={styles.energySub}>kcal/ngày (TDEE)</Text>
+                            <Text style={styles.energySub}>kcal/ngày</Text>
                         </View>
-                        <View style={styles.energyRight}>
-                            <Text style={styles.energyRightValue}>{hasCalories ? calorieDeltaText : "-"}</Text>
-                            <Text style={styles.energyRightSub}>{hasCalories ? calorieDeltaLabel : "Chưa có dữ liệu"}</Text>
+                        <View style={styles.energyBlock}>
+                            <Text style={styles.energyLabel}>Mục tiêu</Text>
+                            <Text style={styles.energyValue}>{hasCalories ? String(healthData.calorieGoal) : "-"}</Text>
+                            <Text style={styles.energySub}>kcal/ngày</Text>
                         </View>
+                    </View>
+                    <View style={styles.energyInfoRow}>
+                        <Text style={styles.energyInfoText}>Hiện đang tiêu thụ {hasCalories ? `${String(healthData.dailyCalories)} kcal` : "-"}</Text>
+                        <Text style={styles.energyInfoBadge}>{hasCalories ? calorieDeltaLabel : "Chưa có dữ liệu"}</Text>
                     </View>
                     <Pressable onPress={() => setScreen("calories")} style={styles.tdeeButton}>
                         <View style={styles.tdeeButtonLeft}>
@@ -391,29 +442,50 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "flex-start",
+        gap: 12,
+    },
+    energyBlock: {
+        flex: 1,
+        padding: 16,
+        borderRadius: 22,
+        backgroundColor: colors.card,
+    },
+    energyLabel: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: "700",
+        marginBottom: 8,
     },
     energyValue: {
-        fontSize: 32,
+        fontSize: 28,
         fontWeight: "800",
         color: colors.foreground,
     },
     energySub: {
-        marginTop: 2,
+        marginTop: 6,
         fontSize: 12,
         color: colors.muted,
     },
-    energyRight: {
-        alignItems: "flex-end",
+    energyInfoRow: {
+        marginTop: 16,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
     },
-    energyRightValue: {
-        fontSize: 14,
+    energyInfoText: {
+        flex: 1,
+        color: colors.foreground,
+        fontSize: 13,
+    },
+    energyInfoBadge: {
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 999,
+        backgroundColor: colors.accentSoft,
+        color: colors.accent,
+        fontSize: 12,
         fontWeight: "700",
-        color: colors.primary,
-    },
-    energyRightSub: {
-        marginTop: 4,
-        fontSize: 12,
-        color: colors.muted,
     },
     tdeeButton: {
         marginTop: 16,

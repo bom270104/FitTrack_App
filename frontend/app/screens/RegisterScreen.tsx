@@ -27,10 +27,10 @@ export function RegisterScreen() {
                 return;
             }
 
-            Toast.show({ type: "success", text1: "Thông báo", text2: "Đăng ký thành công" });
+            Toast.show({ type: "success", text1: "Thông báo", text2: "Đăng ký thành công! Vui lòng đăng nhập" });
             setTimeout(() => {
                 setScreen("login");
-            }, 3000);
+            }, 2000);
         } catch (error) {
             // eslint-disable-next-line no-console
             console.error(error);

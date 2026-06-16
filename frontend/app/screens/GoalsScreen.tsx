@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Alert } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useApp } from "../app-context";
 import { BottomNav } from "../bottom-nav";
@@ -21,37 +21,159 @@ interface Goal {
 }
 
 export function GoalsScreen() {
-    const { healthData, setScreen } = useApp();
-    const [goals, setGoals] = useState<Goal[]>([
-        { id: "1", title: "Target Weight", target: "68 kg", current: 72, max: 72, unit: "kg", icon: "scale-balance", tint: colors.primarySoft, color: colors.primary, completed: false },
-        { id: "2", title: "Daily Water", target: "2,500 ml", current: healthData.waterIntake, max: healthData.waterGoal, unit: "ml", icon: "water-outline", tint: colors.secondarySoft, color: colors.secondary, completed: healthData.waterIntake >= healthData.waterGoal },
-        { id: "3", title: "Calorie Budget", target: "2,200 kcal", current: healthData.dailyCalories, max: healthData.calorieGoal, unit: "kcal", icon: "fire", tint: colors.accentSoft, color: colors.accent, completed: healthData.dailyCalories <= healthData.calorieGoal },
-    ]);
+    const { healthData, setScreen, authFetch } = useApp();
+    const [goals, setGoals] = useState<Goal[]>([]);
 
     const [showAddGoal, setShowAddGoal] = useState(false);
     const [newGoal, setNewGoal] = useState({ title: "", target: "", unit: "kg" });
+    const [showEditGoal, setShowEditGoal] = useState(false);
+    const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
 
-    const addGoal = () => {
+    const loadGoals = async () => {
+        try {
+            const res = await authFetch("/api/goals");
+            if (!res || !res.ok) return;
+            const body = (await res.json()) as any;
+            const serverGoals = Array.isArray(body.data?.goals) ? body.data.goals : [];
+            const mapped: Goal[] = serverGoals.map((g: any) => {
+                let unit = g.unit ?? "";
+                const titleLower = String(g.title || "").toLowerCase();
+                const targetLower = String(g.target || "").toLowerCase();
+                if (!unit && (titleLower.includes("nước") || titleLower.includes("nuoc") || targetLower.includes("ml"))) {
+                    unit = "ml";
+                }
+                let maxVal = Number.isFinite(Number(g.max)) ? Number(g.max) : undefined;
+                const parsedTarget = Number(String(g.target ?? "").replace(/[^0-9.]/g, ""));
+                const targetValue = Number.isFinite(parsedTarget) && parsedTarget > 0 ? parsedTarget : undefined;
+
+                if (targetValue) {
+                    maxVal = targetValue;
+                }
+
+                const maxValNumber = Number.isFinite(Number(maxVal)) ? Number(maxVal) : 0;
+                if (unit === "ml" && maxValNumber <= 1) {
+                    maxVal = healthData?.waterGoal ?? 2000;
+                }
+
+                const finalMax = Number.isFinite(Number(maxVal)) ? Number(maxVal) : 1;
+                const targetText = g.target ?? (unit === "ml" ? `${finalMax} ml` : String(finalMax));
+
+                // prefer live water intake for ml goals when goal current is missing
+                let currentVal = Number.isFinite(Number(g.current)) ? Number(g.current) : 0;
+                if (unit === "ml") {
+                    if (!Number.isFinite(currentVal) || currentVal <= 0) {
+                        currentVal = healthData?.waterIntake ?? 0;
+                    }
+                }
+
+                return {
+                    id: g._id,
+                    title: g.title,
+                    target: targetText,
+                    current: currentVal,
+                    max: Number.isFinite(Number(maxVal)) ? Number(maxVal) : 1,
+                    unit: unit,
+                    icon: g.icon ?? "target",
+                    tint: g.tint ?? colors.primarySoft,
+                    color: g.color ?? colors.primary,
+                    completed: !!g.completed,
+                };
+            });
+            setGoals(mapped);
+        } catch (err) {
+            // noop
+        }
+    };
+
+    const addGoal = async () => {
         if (!newGoal.title.trim() || !newGoal.target.trim()) return;
 
-        setGoals((current) => [
-            {
-                id: String(Date.now()),
-                title: newGoal.title.trim(),
-                target: newGoal.target.trim(),
-                current: 0,
-                max: 1,
-                unit: newGoal.unit,
-                icon: "target",
-                tint: colors.primarySoft,
-                color: colors.primary,
-                completed: false,
-            },
-            ...current,
-        ]);
+        try {
+            const res = await authFetch("/api/goals", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: newGoal.title.trim(), target: newGoal.target.trim(), unit: newGoal.unit }),
+            });
+
+            if (!res || !res.ok) {
+                setShowAddGoal(false);
+                setNewGoal({ title: "", target: "", unit: "kg" });
+                return;
+            }
+
+            const body = (await res.json()) as any;
+            const g = body.data?.goal;
+            if (g) {
+                const mapped: Goal = {
+                    id: g._id,
+                    title: g.title,
+                    target: g.target,
+                    current: g.current ?? 0,
+                    max: g.max ?? 1,
+                    unit: g.unit ?? "",
+                    icon: g.icon ?? "target",
+                    tint: g.tint ?? colors.primarySoft,
+                    color: g.color ?? colors.primary,
+                    completed: !!g.completed,
+                };
+                setGoals((current) => [mapped, ...current]);
+            }
+        } catch (err) {
+            // noop
+        }
+
         setNewGoal({ title: "", target: "", unit: "kg" });
         setShowAddGoal(false);
     };
+
+    const updateGoal = async () => {
+        if (!editingGoal) return;
+        try {
+            const res = await authFetch(`/api/goals/${editingGoal.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: editingGoal.title, target: editingGoal.target, unit: editingGoal.unit }),
+            });
+            if (!res || !res.ok) {
+                setShowEditGoal(false);
+                setEditingGoal(null);
+                return;
+            }
+            const body = (await res.json()) as any;
+            const g = body.data?.goal;
+            if (g) {
+                setGoals((current) => current.map((cg) => (cg.id === editingGoal.id ? { ...cg, title: g.title, target: g.target, unit: g.unit } : cg)));
+            }
+        } catch (err) {
+            // noop
+        }
+        setShowEditGoal(false);
+        setEditingGoal(null);
+    };
+
+    const confirmDeleteGoal = (goal: Goal) => {
+        Alert.alert("Xóa mục tiêu", "Bạn có chắc muốn xóa mục tiêu này?", [
+            { text: "Hủy", style: "cancel" },
+            { text: "Xóa", style: "destructive", onPress: () => void deleteGoal(goal) },
+        ]);
+    };
+
+    const deleteGoal = async (goal: Goal) => {
+        try {
+            const res = await authFetch(`/api/goals/${goal.id}`, { method: "DELETE" });
+            if (!res || !res.ok) return;
+            const body = (await res.json()) as any;
+            // if success, remove from list
+            setGoals((current) => current.filter((g) => g.id !== goal.id));
+        } catch (err) {
+            // noop
+        }
+    };
+
+    React.useEffect(() => {
+        void loadGoals();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [healthData?.waterGoal, healthData?.waterIntake]);
 
     return (
         <View style={styles.root}>
@@ -110,9 +232,45 @@ export function GoalsScreen() {
                     </View>
                 </Modal>
 
+                <Modal visible={showEditGoal} transparent animationType="fade" onRequestClose={() => setShowEditGoal(false)}>
+                    <View style={styles.modalBackdrop}>
+                        <View style={styles.modalCard}>
+                            <Text style={styles.modalTitle}>Chỉnh sửa mục tiêu</Text>
+                            <View style={styles.modalFields}>
+                                <Input value={editingGoal?.title ?? ""} onChangeText={(text) => setEditingGoal((cur) => cur ? { ...cur, title: text } : cur)} placeholder="Tiêu đề mục tiêu" />
+                                <Input value={editingGoal?.target ?? ""} onChangeText={(text) => setEditingGoal((cur) => cur ? { ...cur, target: text } : cur)} placeholder="Giá trị mục tiêu" />
+                                <View style={styles.unitRow}>
+                                    {(["kg", "ml", "kcal"] as const).map((unit) => {
+                                        const active = editingGoal?.unit === unit;
+                                        return (
+                                            <Pressable key={unit} onPress={() => setEditingGoal((cur) => cur ? { ...cur, unit } : cur)} style={[styles.unitPill, active && styles.unitPillActive]}>
+                                                <Text style={[styles.unitText, active && styles.unitTextActive]}>{unit}</Text>
+                                            </Pressable>
+                                        );
+                                    })}
+                                </View>
+                                <View style={styles.modalActions}>
+                                    <Button variant="outline" onPress={() => { setShowEditGoal(false); setEditingGoal(null); }} title="Hủy" style={styles.actionButton} />
+                                    <Button onPress={updateGoal} title="Lưu" style={styles.actionButtonPrimary} />
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+
                 <View style={styles.goalList}>
                     {goals.map((goal) => {
-                        const progress = Math.round((goal.current / goal.max) * 100);
+                        // fallback order: stored max > parsed numeric from target string > healthData.waterGoal (for ml) > default 2000/1
+                        let displayMax = (goal.max && goal.max > 0) ? goal.max : 0;
+                        if (!displayMax) {
+                            // try parse number from target text
+                            const parsed = Number(String(goal.target).replace(/[^0-9.]/g, ""));
+                            if (Number.isFinite(parsed) && parsed > 0) displayMax = parsed;
+                        }
+                        if (!displayMax) {
+                            displayMax = goal.unit === "ml" ? (healthData?.waterGoal ?? 2000) : Math.max(1, goal.max ?? 1);
+                        }
+                        const progress = Math.round((goal.current / displayMax) * 100);
                         return (
                             <View key={goal.id} style={styles.goalCard}>
                                 <View style={styles.goalRow}>
@@ -122,14 +280,22 @@ export function GoalsScreen() {
                                     <View style={styles.goalBody}>
                                         <View style={styles.goalTitleRow}>
                                             <Text style={styles.goalTitle}>{goal.title}</Text>
-                                            {goal.completed ? <View style={styles.checkBadge}><MaterialCommunityIcons name="check" size={16} color="#FFFFFF" /></View> : null}
+                                            <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                                                <Pressable onPress={() => { setEditingGoal(goal); setShowEditGoal(true); }} style={{ marginRight: 8 }}>
+                                                    <MaterialCommunityIcons name="pencil" size={18} color={colors.muted} />
+                                                </Pressable>
+                                                <Pressable onPress={() => confirmDeleteGoal(goal)}>
+                                                    <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.destructive ?? "#E53E3E"} />
+                                                </Pressable>
+                                                {goal.completed ? <View style={styles.checkBadge}><MaterialCommunityIcons name="check" size={16} color="#FFFFFF" /></View> : null}
+                                            </View>
                                         </View>
                                         <Text style={styles.goalTarget}>Mục tiêu: {goal.target}</Text>
                                         <View style={styles.progressMeta}>
-                                            <Text style={styles.progressMetaText}>{goal.current} / {goal.max} {goal.unit}</Text>
-                                            <Text style={[styles.progressMetaText, goal.completed && styles.progressDone]}>{progress}%</Text>
+                                            <Text style={styles.progressMetaText}>{goal.current} / {displayMax} {goal.unit}</Text>
+                                            <Text style={[styles.progressMetaText, goal.completed && styles.progressDone]}>{isFinite(progress) ? `${progress}%` : "0%"}</Text>
                                         </View>
-                                        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.min(progress, 100)}%`, backgroundColor: goal.color }]} /></View>
+                                        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.min(isFinite(progress) ? progress : 0, 100)}%`, backgroundColor: goal.color }]} /></View>
                                     </View>
                                 </View>
                             </View>

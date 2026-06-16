@@ -23,9 +23,16 @@ export function ProfileScreen() {
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [activeInfo, setActiveInfo] = useState<{ title: string; body: string } | null>(null);
     const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+    const currentYear = new Date().getFullYear();
+    const initialBirthYear = (userData as any)?.date_of_birth
+        ? String(new Date((userData as any).date_of_birth).getFullYear())
+        : userData?.age
+            ? String(currentYear - userData.age)
+            : "";
+
     const [profileForm, setProfileForm] = useState({
         name: userData?.name ?? "",
-        age: String(userData?.age ?? ""),
+        birthYear: initialBirthYear,
         height: String(userData?.height ?? ""),
         weight: String(userData?.weight ?? ""),
         dailyWaterGoal: String(userData?.dailyWaterGoal ?? 2000),
@@ -38,9 +45,15 @@ export function ProfileScreen() {
     };
 
     const openEditProfile = () => {
+        const birthYear = (userData as any)?.date_of_birth
+            ? String(new Date((userData as any).date_of_birth).getFullYear())
+            : userData?.age
+                ? String(currentYear - userData.age)
+                : "";
+
         setProfileForm({
             name: userData?.name ?? "",
-            age: String(userData?.age ?? ""),
+            birthYear,
             height: String(userData?.height ?? ""),
             weight: String(userData?.weight ?? ""),
             dailyWaterGoal: String(userData?.dailyWaterGoal ?? 2000),
@@ -52,9 +65,12 @@ export function ProfileScreen() {
     const saveProfile = async () => {
         setProfileError(null);
 
+        const birthYearNum = parseOptionalNumber(profileForm.birthYear ?? "");
+        const ageToSend = birthYearNum ? Math.max(0, currentYear - birthYearNum) : undefined;
+
         const ok = await updateProfile({
             name: profileForm.name,
-            age: parseOptionalNumber(profileForm.age),
+            age: ageToSend,
             height: parseOptionalNumber(profileForm.height),
             weight: parseOptionalNumber(profileForm.weight),
             dailyWaterGoal: parseOptionalNumber(profileForm.dailyWaterGoal),
@@ -195,7 +211,7 @@ export function ProfileScreen() {
                             <Input value={profileForm.name} onChangeText={(text) => setProfileForm((current) => ({ ...current, name: text }))} placeholder="Họ và tên" />
                             <Text style={styles.helperText}>Email chỉ đọc và theo thông tin đăng ký tài khoản.</Text>
                             <View style={styles.twoCol}>
-                                <Input value={profileForm.age} onChangeText={(text) => setProfileForm((current) => ({ ...current, age: text }))} placeholder="Tuổi" keyboardType="numeric" style={styles.flexInput} />
+                                <Input value={profileForm.birthYear} onChangeText={(text) => setProfileForm((current) => ({ ...current, birthYear: text }))} placeholder="Năm sinh" keyboardType="numeric" style={styles.flexInput} />
                                 <Input value={profileForm.height} onChangeText={(text) => setProfileForm((current) => ({ ...current, height: text }))} placeholder="Chiều cao (cm)" keyboardType="numeric" style={styles.flexInput} />
                             </View>
                             <View style={styles.twoCol}>

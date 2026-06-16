@@ -1,11 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { Platform } from "react-native";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import mapDashboardToHealthData from "./utils/statsMapper";
 
 export type ScreenName =
     | "splash"
     | "login"
     | "register"
+    | "onboarding"
     | "dashboard"
     | "bmi"
     | "calories"
@@ -23,10 +25,12 @@ type UserData = {
     age?: number;
     height?: number;
     weight?: number;
+    targetWeight?: number;
     gender?: string;
     activityLevel?: string;
     goal?: string;
     dailyWaterGoal?: number;
+    profileComplete?: boolean;
 };
 
 type HealthData = {
@@ -38,15 +42,60 @@ type HealthData = {
     dailyCalories: number;
     waterIntake: number;
     waterGoal: number;
+    proteinGoal: number;
+    carbsGoal: number;
+    fatGoal: number;
     weightHistory: WeightPoint[];
     waterHistory: WaterPoint[];
 };
+
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+
+export type FoodSearchResult = {
+    _id: string;
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    servingSize: number;
+    category?: string;
+};
+
+export type MealFoodItem = {
+    foodId: string;
+    name: string;
+    weightGrams: number;
+    totalCalories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+};
+
+export type MealGroup = {
+    logId: string | null;
+    mealType: MealType;
+    foods: MealFoodItem[];
+    totalCalories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+};
+
+export type TodayMeals = Record<MealType, MealGroup>;
 
 type AppContextValue = {
     screen: ScreenName;
     setScreen: (screen: ScreenName) => void;
     userData: UserData | null;
     healthData: HealthData;
+    todayMeals: TodayMeals;
+    mealTotals: {
+        calories: number;
+        protein: number;
+        carbs: number;
+        fat: number;
+    };
     authFetch: (path: string, opts?: RequestInit) => Promise<Response | null>;
     login: (email: string, password: string) => Promise<boolean>;
     register: (payload: any) => Promise<boolean>;
@@ -57,12 +106,22 @@ type AppContextValue = {
     updateCaloriesResult: (payload: { tdee: number; calorieGoal: number; bmr?: number }) => void;
     addWater: (amount: number) => Promise<void>;
     refreshHealth: () => Promise<void>;
+    refreshProfile: (overrideToken?: string | null) => Promise<boolean>;
+    searchFoods: (query: string) => Promise<FoodSearchResult[]>;
+    logMeal: (mealType: MealType, foodId: string, weight: number) => Promise<boolean>;
+    fetchTodayMeals: (overrideToken?: string | null) => Promise<void>;
+    deleteLoggedFood: (logId: string, foodId: string) => Promise<boolean>;
     loading: boolean;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:5000";
+const DEFAULT_API_BASE_URL = Platform.select({
+    android: "https://calibrate-ecosphere-platonic.ngrok-free.dev",
+    ios: "http://localhost:5000",
+    default: "http://localhost:5000",
+});
+const API_BASE_URL = process.env.API_BASE_URL || DEFAULT_API_BASE_URL;
 const TOKEN_KEY = "ft_token";
 const DEFAULT_WATER_GOAL = 2000;
 
@@ -77,11 +136,50 @@ function normalizeUser(user: any): UserData {
         age: isFiniteNumber(user.age) ? user.age : undefined,
         height: isFiniteNumber(user.height) ? user.height : undefined,
         weight: isFiniteNumber(user.weight) ? user.weight : undefined,
+        targetWeight: isFiniteNumber(user.targetWeight) ? user.targetWeight : isFiniteNumber(user.target_weight) ? user.target_weight : undefined,
         gender: user.gender,
         activityLevel: user.activityLevel,
         goal: user.goal,
         dailyWaterGoal: isFiniteNumber(user.dailyWaterGoal) ? user.dailyWaterGoal : undefined,
+        profileComplete: user.profileComplete === true,
     };
+}
+
+function createEmptyMealGroup(mealType: MealType): MealGroup {
+    return {
+        logId: null,
+        mealType,
+        foods: [],
+        totalCalories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+    };
+}
+
+function createEmptyMeals(): TodayMeals {
+    return {
+        breakfast: createEmptyMealGroup("breakfast"),
+        lunch: createEmptyMealGroup("lunch"),
+        dinner: createEmptyMealGroup("dinner"),
+        snack: createEmptyMealGroup("snack"),
+    };
+}
+
+function calculateBmi(height?: number, weight?: number) {
+    if (!isFiniteNumber(height) || !isFiniteNumber(weight) || height <= 0) {
+        return 0;
+    }
+
+    return Number((weight / Math.pow(height / 100, 2)).toFixed(1));
+}
+
+function shouldShowOnboarding(user: any) {
+    if (user?.profileComplete === true) {
+        return false;
+    }
+
+    return !user?.gender || !user?.age || !user?.height || !user?.weight || !user?.activityLevel || !user?.goal;
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -98,9 +196,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         dailyCalories: 0,
         waterIntake: 0,
         waterGoal: DEFAULT_WATER_GOAL,
+        proteinGoal: 0,
+        carbsGoal: 0,
+        fatGoal: 0,
         weightHistory: [],
         waterHistory: [],
     });
+    const [todayMeals, setTodayMeals] = useState<TodayMeals>(createEmptyMeals());
 
     async function storeToken(value: string | null) {
         setToken(value);
@@ -152,16 +254,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             const body = (await res.json()) as any;
             const user = body?.data?.user ?? body?.data;
 
+            let targetWeightFromProfile: number | undefined;
+            let calorieGoalFromProfile: number | undefined;
+            let tdeeFromProfile: number | undefined;
+            let bmrFromProfile: number | undefined;
+            if (authToken) {
+                const profileRes = await fetch(`${API_BASE_URL}/api/onboarding/profile`, { headers });
+                if (profileRes && profileRes.ok) {
+                    const profileBody = (await profileRes.json()) as any;
+                    const profile = profileBody?.data?.profile;
+                    const targetFromProfile = profile?.targetWeight ?? profile?.target_weight;
+                    const calorieGoalValue = profile?.calorieGoal ?? profile?.calorie_goal;
+                    const tdeeValue = profile?.tdee ?? profile?.tdee;
+                    const bmrValue = profile?.bmr ?? profile?.bmr;
+
+                    if (isFiniteNumber(targetFromProfile)) {
+                        targetWeightFromProfile = targetFromProfile;
+                    }
+                    if (isFiniteNumber(calorieGoalValue)) {
+                        calorieGoalFromProfile = calorieGoalValue;
+                    }
+                    if (isFiniteNumber(tdeeValue)) {
+                        tdeeFromProfile = tdeeValue;
+                    }
+                    if (isFiniteNumber(bmrValue)) {
+                        bmrFromProfile = bmrValue;
+                    }
+                }
+            }
+
             if (user) {
                 setUserData(normalizeUser(user));
 
-                if (isFiniteNumber(user.weight) || isFiniteNumber(user.dailyWaterGoal)) {
-                    setHealthData((current) => ({
+                setHealthData((current) => {
+                    const nextWeight = isFiniteNumber(user.weight) ? user.weight : current.currentWeight;
+                    const nextHeight = isFiniteNumber(user.height) ? user.height : undefined;
+                    const nextBmi = calculateBmi(nextHeight, nextWeight) || current.bmi;
+                    const nextTargetWeight =
+                        targetWeightFromProfile ??
+                        (isFiniteNumber(user.targetWeight) ? user.targetWeight : isFiniteNumber(user.target_weight) ? user.target_weight : current.targetWeight);
+
+                    return {
                         ...current,
-                        currentWeight: isFiniteNumber(user.weight) ? user.weight : current.currentWeight,
+                        currentWeight: nextWeight,
+                        targetWeight: nextTargetWeight,
                         waterGoal: isFiniteNumber(user.dailyWaterGoal) ? user.dailyWaterGoal : current.waterGoal,
-                    }));
-                }
+                        bmi: nextBmi,
+                        calorieGoal: calorieGoalFromProfile ?? current.calorieGoal,
+                        tdee: tdeeFromProfile ?? current.tdee,
+                        // keep current dailyCalories, protein/carbs/fat goals until dashboard loads
+                    };
+                });
 
                 return user;
             }
@@ -172,6 +315,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             console.error(error);
             return null;
         }
+    }
+
+    async function refreshProfile(overrideToken?: string | null) {
+        const user = await fetchProfile(overrideToken);
+        return Boolean(user);
     }
 
     async function fetchHealth(overrideToken?: string | null) {
@@ -202,6 +350,122 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
+    async function fetchTodayMeals(overrideToken?: string | null) {
+        const res = await fetchWithAuth("/api/meals/today", {}, overrideToken);
+
+        if (!res || !res.ok) {
+            const nextMeals = createEmptyMeals();
+
+            setTodayMeals(nextMeals);
+            setHealthData((current) => ({ ...current, dailyCalories: 0 }));
+            return;
+        }
+
+        const body = (await res.json()) as any;
+        const meals = body.data?.meals ?? {};
+        const nextMeals: TodayMeals = {
+            breakfast: {
+                logId: meals.breakfast?.logId ?? null,
+                mealType: "breakfast" as MealType,
+                foods: Array.isArray(meals.breakfast?.foods) ? meals.breakfast.foods : [],
+                totalCalories: Number(meals.breakfast?.totalCalories ?? 0),
+                protein: Number(meals.breakfast?.protein ?? 0),
+                carbs: Number(meals.breakfast?.carbs ?? 0),
+                fat: Number(meals.breakfast?.fat ?? 0),
+            },
+            lunch: {
+                logId: meals.lunch?.logId ?? null,
+                mealType: "lunch" as MealType,
+                foods: Array.isArray(meals.lunch?.foods) ? meals.lunch.foods : [],
+                totalCalories: Number(meals.lunch?.totalCalories ?? 0),
+                protein: Number(meals.lunch?.protein ?? 0),
+                carbs: Number(meals.lunch?.carbs ?? 0),
+                fat: Number(meals.lunch?.fat ?? 0),
+            },
+            dinner: {
+                logId: meals.dinner?.logId ?? null,
+                mealType: "dinner" as MealType,
+                foods: Array.isArray(meals.dinner?.foods) ? meals.dinner.foods : [],
+                totalCalories: Number(meals.dinner?.totalCalories ?? 0),
+                protein: Number(meals.dinner?.protein ?? 0),
+                carbs: Number(meals.dinner?.carbs ?? 0),
+                fat: Number(meals.dinner?.fat ?? 0),
+            },
+            snack: {
+                logId: meals.snack?.logId ?? null,
+                mealType: "snack" as MealType,
+                foods: Array.isArray(meals.snack?.foods) ? meals.snack.foods : [],
+                totalCalories: Number(meals.snack?.totalCalories ?? 0),
+                protein: Number(meals.snack?.protein ?? 0),
+                carbs: Number(meals.snack?.carbs ?? 0),
+                fat: Number(meals.snack?.fat ?? 0),
+            },
+        };
+
+        setTodayMeals(nextMeals);
+
+        try {
+            const total = Object.values(nextMeals).reduce((s, g: any) => s + (Number(g.totalCalories) || 0), 0);
+            setHealthData((current) => ({ ...current, dailyCalories: total }));
+        } catch (err) {
+            // noop
+        }
+    }
+
+    async function searchFoods(query: string) {
+        if (!query.trim()) {
+            return [];
+        }
+
+        const res = await fetchWithAuth(`/api/foods/search?q=${encodeURIComponent(query.trim())}`);
+        if (!res || !res.ok) {
+            return [];
+        }
+
+        const body = (await res.json()) as any;
+        return Array.isArray(body.data?.foods) ? body.data.foods : [];
+    }
+
+    async function logMeal(mealType: MealType, foodId: string, weight: number) {
+        try {
+            const res = await fetchWithAuth("/api/meals/log", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mealType, foodId, weightGrams: weight }),
+            });
+
+            if (!res || !res.ok) {
+                return false;
+            }
+
+            await fetchTodayMeals();
+            return true;
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(error);
+            return false;
+        }
+    }
+
+    async function deleteLoggedFood(logId: string, foodId: string) {
+        try {
+            const res = await fetchWithAuth(`/api/meals/${logId}/food/${foodId}`, {
+                method: "DELETE",
+            });
+
+            if (!res || !res.ok) {
+                return false;
+            }
+
+            await fetchTodayMeals();
+            return true;
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(error);
+            return false;
+        }
+    }
+
     async function login(email: string, password: string) {
         setLoading(true);
         try {
@@ -228,7 +492,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
             await fetchProfile(nextToken);
             await fetchHealth(nextToken);
-            setScreen("dashboard");
+            await fetchTodayMeals(nextToken);
+
+            const profileComplete = body.data?.profileComplete ?? shouldShowOnboarding(loginUserData || {}) === false;
+            setScreen(profileComplete ? "dashboard" : "onboarding");
 
             return true;
         } catch (error) {
@@ -249,7 +516,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 body: JSON.stringify(payload),
             });
 
-            await res.json();
+            const body = (await res.json()) as any;
             if (!res.ok) {
                 return false;
             }
@@ -287,10 +554,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     function updateCaloriesResult(payload: { tdee: number; calorieGoal: number; bmr?: number }) {
+        const calorieGoal = payload.calorieGoal;
+        const proteinGoal = Math.round((calorieGoal * 0.3) / 4);
+        const carbsGoal = Math.round((calorieGoal * 0.45) / 4);
+        const fatGoal = Math.round((calorieGoal * 0.25) / 9);
+
         setHealthData((current) => ({
             ...current,
             tdee: payload.tdee,
-            calorieGoal: payload.calorieGoal,
+            calorieGoal,
+            proteinGoal,
+            carbsGoal,
+            fatGoal,
         }));
     }
 
@@ -404,7 +679,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 }
 
                 if (typeof updated.height === "number" && typeof updated.weight === "number") {
-                    const nextBmi = Number((updated.weight / Math.pow(updated.height / 100, 2)).toFixed(1));
+                    const nextBmi = calculateBmi(updated.height, updated.weight);
                     return {
                         ...next,
                         currentWeight: updated.weight,
@@ -429,8 +704,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     function logout() {
-        void AsyncStorage.removeItem(TOKEN_KEY);
-        setToken(null);
+        void storeToken(null);
         setUserData(null);
         setHealthData({
             currentWeight: 0,
@@ -441,6 +715,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             dailyCalories: 0,
             waterIntake: 0,
             waterGoal: DEFAULT_WATER_GOAL,
+            proteinGoal: 0,
+            carbsGoal: 0,
+            fatGoal: 0,
             weightHistory: [],
             waterHistory: [],
         });
@@ -459,9 +736,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
             if (storedToken) {
                 setToken(storedToken);
-                await fetchProfile(storedToken);
+                const storedUser = await fetchProfile(storedToken);
+                if (!storedUser) {
+                    await storeToken(null);
+                    setScreen("login");
+                    return;
+                }
+
                 await fetchHealth(storedToken);
-                setScreen("dashboard");
+                await fetchTodayMeals(storedToken);
+                const nextScreen = shouldShowOnboarding(storedUser) ? "onboarding" : "dashboard";
+                setScreen(nextScreen);
                 return;
             }
 
@@ -476,11 +761,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // reset daily water intake at day rollover
+    useEffect(() => {
+        const getDateKey = () => new Date().toISOString().slice(0, 10);
+        let last = getDateKey();
+
+        const id = setInterval(() => {
+            const now = getDateKey();
+            if (now !== last) {
+                last = now;
+                // reset local water intake and refresh server data
+                setHealthData((current) => ({ ...current, waterIntake: 0, waterHistory: [] }));
+                void fetchHealth();
+                void fetchTodayMeals();
+            }
+        }, 60 * 1000);
+
+        return () => clearInterval(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const mealTotals = useMemo(
+        () =>
+            Object.values(todayMeals).reduce(
+                (acc, group) => ({
+                    calories: acc.calories + group.totalCalories,
+                    protein: acc.protein + group.protein,
+                    carbs: acc.carbs + group.carbs,
+                    fat: acc.fat + group.fat,
+                }),
+                { calories: 0, protein: 0, carbs: 0, fat: 0 },
+            ),
+        [todayMeals],
+    );
+
     const value: AppContextValue = {
         screen,
         setScreen,
         userData,
         healthData,
+        todayMeals,
+        mealTotals,
         authFetch: fetchWithAuth,
         loading,
         login,
@@ -492,6 +813,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateCaloriesResult,
         addWater,
         refreshHealth,
+        refreshProfile,
+        searchFoods,
+        logMeal,
+        fetchTodayMeals,
+        deleteLoggedFood,
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

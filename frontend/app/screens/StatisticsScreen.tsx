@@ -25,14 +25,14 @@ export function StatisticsScreen() {
     }, [healthData]);
 
     const chartWeightData = useMemo(() => {
-        const items = healthData.weightHistory || [];
+        const items = (healthData.weightHistory || []).slice().sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
         if (range === "Week") return items.slice(-7);
         if (range === "Month") return items.slice(-30);
         return items;
     }, [healthData.weightHistory, range]);
 
     const chartWaterData = useMemo(() => {
-        const items = healthData.waterHistory || [];
+        const items = (healthData.waterHistory || []).slice().sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
         if (range === "Week") return items.slice(-7);
         if (range === "Month") return items.slice(-30);
         return items;
@@ -95,6 +95,20 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
     );
 }
 
+const formatChartLabel = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return date.getHours() || date.getMinutes() ? `${day}/${month} ${hours}:${minutes}` : `${day}/${month}`;
+};
+
 function LineChart({ data, color }: { data: Array<{ date: string; weight: number }>; color: string }) {
     const values = data.map((item) => Number(item.weight || 0));
     const min = Math.min(...values, 0);
@@ -122,7 +136,7 @@ function LineChart({ data, color }: { data: Array<{ date: string; weight: number
             </View>
             <View style={styles.axisRow}>
                 {data.map((item, index) => (
-                    <Text key={`${item.date}-${index}`} style={styles.axisLabel}>{item.date}</Text>
+                    <Text key={`${item.date}-${index}`} style={styles.axisLabel}>{formatChartLabel(item.date)}</Text>
                 ))}
             </View>
         </View>
@@ -144,7 +158,7 @@ function BarChart({ data, color }: { data: Array<{ date: string; amount: number 
             </View>
             <View style={styles.axisRow}>
                 {data.map((item, index) => (
-                    <Text key={`${item.date}-${index}`} style={styles.axisLabel}>{item.date}</Text>
+                    <Text key={`${item.date}-${index}`} style={styles.axisLabel}>{formatChartLabel(item.date)}</Text>
                 ))}
             </View>
         </View>

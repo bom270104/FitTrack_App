@@ -6,7 +6,7 @@ export async function getNotificationSettingByUser(userId) {
 
 export async function upsertNotificationSetting(userId, payload) {
     const data = Object.assign({}, payload, { userId });
-    return NotificationSetting.findOneAndUpdate({ userId }, data, { upsert: true, new: true, setDefaultsOnInsert: true }).lean();
+    return NotificationSetting.findOneAndUpdate({ userId }, data, { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }).lean();
 }
 
 export async function removeNotificationSetting(userId) {
@@ -14,7 +14,7 @@ export async function removeNotificationSetting(userId) {
 }
 
 export async function markLastSent(userId, date) {
-    return NotificationSetting.findOneAndUpdate({ userId }, { lastSent: date }, { new: true }).lean();
+    return NotificationSetting.findOneAndUpdate({ userId }, { lastSent: date }, { returnDocument: "after" }).lean();
 }
 
 export default { getNotificationSettingByUser, upsertNotificationSetting, removeNotificationSetting };

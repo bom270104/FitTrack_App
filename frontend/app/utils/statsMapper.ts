@@ -14,19 +14,27 @@ export function mapDashboardToHealthData(dashboard: any, current: any) {
         ? dd.water.recentEntries.map((e: any) => ({ date: e.date || e.createdAt || "", amount: e.amount ?? 0 }))
         : [];
 
-    const latestBmi = typeof dd?.bmi === "number" ? dd.bmi : dd?.bmi?.latest?.bmi;
+    // Latest BMI entry
+    const latestBmiEntry = dd?.bmi?.latest || {};
 
-    const latestCalories = dd?.calories?.latest ?? {};
+    // Latest calories entry (from CaloriesLog)
+    const latestCalories = dd?.calories?.latest || {};
 
-    const bmi = finiteOrCurrent(latestBmi, current.bmi ?? 0);
-    const tdee = finiteOrCurrent(dd?.tdee ?? latestCalories.tdee, current.tdee ?? 0);
+    const bmi = finiteOrCurrent(
+        Number(latestBmiEntry.bmi ?? latestBmiEntry.weight ?? 0),
+        current.bmi ?? 0,
+    );
+
+    const tdee = finiteOrCurrent(Number(latestCalories.tdee || 0), current.tdee ?? 0);
+
     const calorieGoal = finiteOrCurrent(
-        dd?.calorieGoal ?? latestCalories.recommendedCalories,
+        Number(latestCalories.recommendedCalories ?? current.calorieGoal ?? 0),
         current.calorieGoal ?? 0,
     );
-    const currentWeight = finiteOrCurrent(dd?.currentWeight, current.currentWeight ?? 0);
-    const waterTotal = finiteOrCurrent(dd?.water?.totalAmount, current.waterIntake ?? 0);
-    const waterGoal = finiteOrCurrent(dd?.waterGoal ?? dd?.water?.goal, current.waterGoal ?? 2000);
+
+    const currentWeight = finiteOrCurrent(Number(latestBmiEntry.weight || latestBmiEntry.bmi || 0), current.currentWeight ?? 0);
+    const waterTotal = finiteOrCurrent(Number(dd?.water?.totalAmount || 0), current.waterIntake ?? 0);
+    const waterGoal = finiteOrCurrent(Number(dd?.water?.goal || 0), current.waterGoal ?? 2000);
 
     return {
         bmi,

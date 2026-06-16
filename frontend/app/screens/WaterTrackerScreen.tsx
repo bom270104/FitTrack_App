@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useApp } from "../app-context";
@@ -14,13 +14,102 @@ const waterOptions = [
 ] as const;
 
 export function WaterTrackerScreen() {
-    const { healthData, addWater, setScreen } = useApp();
+    const { healthData, addWater, setScreen, authFetch } = useApp();
+    const [overrideGoal, setOverrideGoal] = useState<number | null>(null);
 
-    const hasWaterGoal = healthData.waterGoal > 0;
-    const percentage = hasWaterGoal ? Math.round((healthData.waterIntake / healthData.waterGoal) * 100) : 0;
-    const remaining = hasWaterGoal ? Math.max(0, healthData.waterGoal - healthData.waterIntake) : 0;
+    const effectiveGoal = overrideGoal ?? healthData.waterGoal;
+    const hasWaterGoal = effectiveGoal > 0;
+    const percentage = hasWaterGoal ? Math.round((healthData.waterIntake / effectiveGoal) * 100) : 0;
+    const remaining = hasWaterGoal ? Math.max(0, effectiveGoal - healthData.waterIntake) : 0;
     const waterLevel = Math.min(percentage, 100);
-    const logs = Array.isArray(healthData.waterHistory) ? healthData.waterHistory : [];
+
+    const pad = (value: number) => String(value).padStart(2, "0");
+
+    const isSameLocalDay = (dateString: string) => {
+        const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) {
+            return false;
+        }
+
+        const today = new Date();
+        return (
+            date.getFullYear() === today.getFullYear() &&
+            date.getMonth() === today.getMonth() &&
+            date.getDate() === today.getDate()
+        );
+    };
+
+    const formatLogDate = (dateString: string) => {
+        if (!dateString) {
+            return "";
+        }
+
+        if (dateString === "Now") {
+            return "Bây giờ";
+        }
+
+        const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) {
+            return dateString;
+        }
+
+        const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        if (isSameLocalDay(dateString)) {
+            return time;
+        }
+
+        return `${pad(date.getDate())}/${pad(date.getMonth() + 1)} ${time}`;
+    };
+
+    const logs = (Array.isArray(healthData.waterHistory) ? healthData.waterHistory : [])
+        .filter((log) => log.date === "Now" || isSameLocalDay(String(log.date)))
+        .sort((left, right) => {
+            const leftDate = new Date(left.date);
+            const rightDate = new Date(right.date);
+            const leftTime = Number.isNaN(leftDate.getTime()) ? 0 : leftDate.getTime();
+            const rightTime = Number.isNaN(rightDate.getTime()) ? 0 : rightDate.getTime();
+            return leftTime - rightTime;
+        });
+
+    useEffect(() => {
+        let mounted = true;
+
+        async function loadGoals() {
+            if (!authFetch) return;
+            try {
+                const res = await authFetch("/api/goals");
+                if (!res || !res.ok) return;
+                const body = (await res.json()) as any;
+                const serverGoals = Array.isArray(body.data?.goals) ? body.data.goals : [];
+                for (const g of serverGoals) {
+                    const unit = g.unit ?? "";
+                    const title = String(g.title || "").toLowerCase();
+                    const target = String(g.target || "").toLowerCase();
+                    if (unit === "ml" || title.includes("nước") || title.includes("nuoc") || target.includes("ml")) {
+                        const parsedTarget = Number(String(g.target ?? "").replace(/[^0-9.]/g, ""));
+                        const parsedMax = Number(String(g.max ?? "").replace(/[^0-9.]/g, ""));
+                        const val = Number.isFinite(parsedTarget) && parsedTarget > 1 ? parsedTarget : Number.isFinite(parsedMax) && parsedMax > 1 ? parsedMax : null;
+                        if (mounted && val) {
+                            setOverrideGoal(val);
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                // noop
+            }
+        }
+
+        // only load if healthData doesn't already have a custom goal
+        if (!healthData?.waterGoal || healthData.waterGoal <= 1) {
+            void loadGoals();
+        }
+
+        return () => {
+            mounted = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authFetch, healthData?.waterGoal]);
 
     return (
         <View style={styles.root}>
@@ -46,7 +135,7 @@ export function WaterTrackerScreen() {
                     </View>
 
                     <Text style={styles.amount}>{hasWaterGoal || healthData.waterIntake > 0 ? `${healthData.waterIntake}ml` : "-"}</Text>
-                    <Text style={styles.subtitle}>{hasWaterGoal ? `trong mục tiêu hàng ngày ${healthData.waterGoal}ml` : "Chưa có mục tiêu nước"}</Text>
+                    <Text style={styles.subtitle}>{hasWaterGoal ? `trong mục tiêu hàng ngày ${effectiveGoal}ml` : "Chưa có mục tiêu nước"}</Text>
 
                     <View style={styles.summaryRow}>
                         <View style={styles.summaryItem}>
@@ -83,7 +172,7 @@ export function WaterTrackerScreen() {
                                     <View style={styles.logIcon}>
                                         <MaterialCommunityIcons name="water-outline" size={18} color={colors.secondary} />
                                     </View>
-                                    <Text style={styles.logDate}>{log.date}</Text>
+                                    <Text style={styles.logDate}>{formatLogDate(String(log.date))}</Text>
                                 </View>
                                 <Text style={styles.logAmount}>+{log.amount}ml</Text>
                             </View>

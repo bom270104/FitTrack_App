@@ -44,7 +44,7 @@ export function startScheduler() {
 
                 try {
                     const subj = `Reminder: time to drink water — FitTrack`;
-                    const body = `Hi ${user.fullName || "user"},\n\nThis is a friendly reminder to drink water. Keep up your healthy habit!\n\n— FitTrack`;
+                    const body = `Hi ${user.fullName || "user"},\n\n Đây là lời nhắc nhở thân thiện về việc uống nước, hãy duy trì thói quen tốt cho sức khỏe của bạn !\n\n— FitTrack`;
                     await sendMail({ to: user.email, subject: subj, text: body });
                     await markLastSent(s.userId, new Date());
                     console.log(`[scheduler] Sent reminder email to ${who} at ${now.toISOString()}`);
