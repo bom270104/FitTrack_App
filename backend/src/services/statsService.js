@@ -2,6 +2,7 @@ import BmiHistory from "../models/BmiHistory.js";
 import CaloriesLog from "../models/CaloriesLog.js";
 import WaterLog from "../models/WaterLog.js";
 import MealLog from "../models/MealLog.js";
+import UserProfile from "../models/UserProfile.js";
 
 const toSeries = (logs, valueKey) =>
     logs
@@ -31,6 +32,9 @@ export const getDashboardStats = async (userId) => {
             sum + foods.reduce((s2, f) => s2 + (Number(f.totalCalories) || 0), 0)
         );
     }, 0);
+
+    const userProfile = await UserProfile.findOne({ user_id: userId }).lean();
+    const targetWeight = userProfile ? userProfile.target_weight : null;
 
     return {
         bmi: {

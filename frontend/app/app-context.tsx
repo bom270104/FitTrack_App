@@ -125,6 +125,19 @@ const API_BASE_URL = process.env.API_BASE_URL || DEFAULT_API_BASE_URL;
 const TOKEN_KEY = "ft_token";
 const DEFAULT_WATER_GOAL = 2000;
 
+function parseNumber(value: unknown): number | undefined {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+    }
+    if (typeof value === "string" && value.trim() !== "") {
+        const parsed = Number(value.trim());
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+    return undefined;
+}
+
 function isFiniteNumber(value: unknown): value is number {
     return typeof value === "number" && Number.isFinite(value);
 }
@@ -133,14 +146,14 @@ function normalizeUser(user: any): UserData {
     return {
         name: user.fullName || user.name || "",
         email: user.email || "",
-        age: isFiniteNumber(user.age) ? user.age : undefined,
-        height: isFiniteNumber(user.height) ? user.height : undefined,
-        weight: isFiniteNumber(user.weight) ? user.weight : undefined,
-        targetWeight: isFiniteNumber(user.targetWeight) ? user.targetWeight : isFiniteNumber(user.target_weight) ? user.target_weight : undefined,
+        age: parseNumber(user.age),
+        height: parseNumber(user.height),
+        weight: parseNumber(user.weight),
+        targetWeight: parseNumber(user.targetWeight) ?? parseNumber(user.target_weight),
         gender: user.gender,
         activityLevel: user.activityLevel,
         goal: user.goal,
-        dailyWaterGoal: isFiniteNumber(user.dailyWaterGoal) ? user.dailyWaterGoal : undefined,
+        dailyWaterGoal: parseNumber(user.dailyWaterGoal),
         profileComplete: user.profileComplete === true,
     };
 }
@@ -263,10 +276,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 if (profileRes && profileRes.ok) {
                     const profileBody = (await profileRes.json()) as any;
                     const profile = profileBody?.data?.profile;
-                    const targetFromProfile = profile?.targetWeight ?? profile?.target_weight;
-                    const calorieGoalValue = profile?.calorieGoal ?? profile?.calorie_goal;
-                    const tdeeValue = profile?.tdee ?? profile?.tdee;
-                    const bmrValue = profile?.bmr ?? profile?.bmr;
+                    const targetFromProfile = parseNumber(profile?.targetWeight) ?? parseNumber(profile?.target_weight);
+                    const calorieGoalValue = parseNumber(profile?.calorieGoal) ?? parseNumber(profile?.calorie_goal);
+                    const tdeeValue = parseNumber(profile?.tdee) ?? parseNumber(profile?.tdee);
+                    const bmrValue = parseNumber(profile?.bmr) ?? parseNumber(profile?.bmr);
 
                     if (isFiniteNumber(targetFromProfile)) {
                         targetWeightFromProfile = targetFromProfile;
@@ -284,7 +297,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
 
             if (user) {
-                setUserData(normalizeUser(user));
+                const normalizedUser = normalizeUser(user);
+                const nextUserData = {
+                    ...normalizedUser,
+                    targetWeight: targetWeightFromProfile ?? normalizedUser.targetWeight,
+                };
+
+                setUserData(nextUserData);
 
                 setHealthData((current) => {
                     const nextWeight = isFiniteNumber(user.weight) ? user.weight : current.currentWeight;
@@ -331,10 +350,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 const data = (await dash.json()) as any;
                 const dashboard = data.data || {};
 
-                setHealthData((current) => ({
-                    ...current,
-                    ...mapDashboardToHealthData(dashboard, current),
-                }));
+                setHealthData((current) => {
+                    const mapped = mapDashboardToHealthData(dashboard, current);
+                    const nextCalorieGoal = mapped.calorieGoal ?? current.calorieGoal;
+
+                    // Recalculate macro goals based on updated calorie goal
+                    const proteinGoal = nextCalorieGoal > 0 ? Math.round((nextCalorieGoal * 0.3) / 4) : 0;
+                    const carbsGoal = nextCalorieGoal > 0 ? Math.round((nextCalorieGoal * 0.45) / 4) : 0;
+                    const fatGoal = nextCalorieGoal > 0 ? Math.round((nextCalorieGoal * 0.25) / 9) : 0;
+
+                    return {
+                        ...current,
+                        ...mapped,
+                        proteinGoal,
+                        carbsGoal,
+                        fatGoal,
+                    };
+                });
             }
 
             if (today && today.ok) {

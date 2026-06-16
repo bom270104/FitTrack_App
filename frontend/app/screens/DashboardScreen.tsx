@@ -16,6 +16,17 @@ export function DashboardScreen() {
         return fallback;
     };
 
+    const asPositiveNumber = (value: any, fallback = 0) => {
+        const numeric = asNumber(value, NaN);
+        return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+    };
+
+    const formatWeight = (value: number) => {
+        if (!Number.isFinite(value)) return "0";
+        const rounded = Math.round(value * 10) / 10;
+        return rounded.toFixed(1).replace(/\.0$/, "");
+    };
+
     const [overrideWaterGoal, setOverrideWaterGoal] = useState<number | null>(null);
 
     useEffect(() => {
@@ -61,14 +72,20 @@ export function DashboardScreen() {
     const hasCalories = asNumber(healthData.calorieGoal) > 0 || asNumber(healthData.dailyCalories) > 0 || asNumber(healthData.tdee) > 0;
     const effectiveWaterGoal = overrideWaterGoal ?? asNumber(healthData.waterGoal);
     const hasWater = effectiveWaterGoal > 0 || asNumber(healthData.waterIntake) > 0;
-    const hasWeightGoal = asNumber(userData?.weight) > 0 && asNumber(healthData.targetWeight) > 0;
+    const currentWeightNum = asPositiveNumber(healthData.currentWeight, asPositiveNumber(userData?.weight));
+    const startingWeightNum = asPositiveNumber(userData?.weight, currentWeightNum);
+    const targetWeightNum = Math.max(
+        asPositiveNumber(healthData.targetWeight),
+        asPositiveNumber(userData?.targetWeight),
+        asPositiveNumber((userData as any)?.target_weight),
+    );
+    const hasWeightGoal = currentWeightNum > 0 && targetWeightNum > 0;
     const waterPercentage = hasWater && effectiveWaterGoal > 0 ? Math.round((asNumber(healthData.waterIntake) / effectiveWaterGoal) * 100) : 0;
     const caloriePercentage = hasCalories && asNumber(healthData.calorieGoal) > 0 ? Math.round((asNumber(healthData.dailyCalories) / asNumber(healthData.calorieGoal)) * 100) : 0;
-    const userWeightNum = asNumber(userData?.weight);
-    const currentWeightNum = asNumber(healthData.currentWeight);
-    const targetWeightNum = asNumber(healthData.targetWeight);
-    const totalGoalDifference = targetWeightNum - userWeightNum;
-    const weightProgress = hasWeightGoal && totalGoalDifference !== 0 ? Math.round((currentWeightNum - userWeightNum) / totalGoalDifference * 100) : 0;
+    const weightRange = Math.abs(targetWeightNum - startingWeightNum);
+    const weightProgress = hasWeightGoal && weightRange > 0
+        ? Math.round(Math.max(0, Math.min((1 - Math.abs(currentWeightNum - targetWeightNum) / weightRange) * 100, 100)))
+        : 0;
     const calorieDelta = Math.round(asNumber(healthData.calorieGoal) - asNumber(healthData.tdee));
     const calorieDeltaText = calorieDelta > 0 ? `+${calorieDelta} cal` : `${calorieDelta} cal`;
     const calorieDeltaLabel =
@@ -143,7 +160,7 @@ export function DashboardScreen() {
                     </Pressable>
                 </View>
 
-                <Pressable onPress={() => setScreen("goals")} style={({ pressed }) => [styles.goalCard, pressed && styles.pressed]}>
+                {/* <Pressable onPress={() => setScreen("goals")} style={({ pressed }) => [styles.goalCard, pressed && styles.pressed]}>
                     <View style={styles.goalHeader}>
                         <View style={styles.goalHeaderLeft}>
                             <View style={styles.goalIcon}>
@@ -151,7 +168,7 @@ export function DashboardScreen() {
                             </View>
                             <View>
                                 <Text style={styles.goalTitle}>Mục tiêu cân nặng</Text>
-                                <Text style={styles.goalSubtitle}>{hasWeightGoal ? `${String(userData?.weight)}kg → ${String(healthData.targetWeight)}kg` : "Chưa có dữ liệu"}</Text>
+                                <Text style={styles.goalSubtitle}>{hasWeightGoal ? `${formatWeight(currentWeightNum)}kg / ${formatWeight(targetWeightNum)}kg` : "Chưa có dữ liệu"}</Text>
                             </View>
                         </View>
                         <MaterialCommunityIcons name="chevron-right" size={24} color={colors.muted} />
@@ -163,7 +180,7 @@ export function DashboardScreen() {
                     <View style={styles.goalProgressTrack}>
                         <View style={[styles.goalProgressFill, { width: `${Math.max(0, Math.min(weightProgress, 100))}%` }]} />
                     </View>
-                </Pressable>
+                </Pressable> */}
 
                 <View style={styles.energyCard}>
                     <Text style={styles.sectionTitle}>TDEE & Mục tiêu calo</Text>
@@ -189,8 +206,8 @@ export function DashboardScreen() {
                                 <MaterialCommunityIcons name="calculator-variant-outline" size={18} color={colors.primary} />
                             </View>
                             <View>
-                                <Text style={styles.tdeeTitle}>Mở máy tính TDEE</Text>
-                                <Text style={styles.tdeeSub}>Tính calo cho tăng, giảm hoặc giữ cân</Text>
+                                <Text style={styles.tdeeTitle}>Theo dõi calor</Text>
+                                <Text style={styles.tdeeSub}>hãy theo dõi sức khỏe mỗi ngày</Text>
                             </View>
                         </View>
                         <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />

@@ -54,6 +54,12 @@ export function CaloriesScreen() {
 
     const selectedMealGroup = todayMeals[selectedMeal];
 
+    const formatNumber = (num: number): string => {
+        if (!Number.isFinite(num)) return "0";
+        const rounded = Math.round(num * 10) / 10;
+        return rounded.toFixed(1).replace(/\.0$/, "");
+    };
+
     const handleOpenSearch = (mealType: "breakfast" | "lunch" | "dinner" | "snack") => {
         setSelectedMeal(mealType);
         setModalVisible(true);
@@ -122,9 +128,9 @@ export function CaloriesScreen() {
                     </View>
                     <Text style={styles.progressText}>{progressPercent}% của mục tiêu</Text>
                     <View style={styles.macroRow}>
-                        <MacroTile label="P" consumed={mealTotals.protein} goal={healthData.proteinGoal} color="#3B82F6" />
-                        <MacroTile label="C" consumed={mealTotals.carbs} goal={healthData.carbsGoal} color="#F59E0B" />
-                        <MacroTile label="F" consumed={mealTotals.fat} goal={healthData.fatGoal} color="#10B981" />
+                        <MacroTile label="P" consumed={mealTotals.protein} goal={healthData.proteinGoal} color="#3B82F6" formatNumber={formatNumber} />
+                        <MacroTile label="C" consumed={mealTotals.carbs} goal={healthData.carbsGoal} color="#F59E0B" formatNumber={formatNumber} />
+                        <MacroTile label="F" consumed={mealTotals.fat} goal={healthData.fatGoal} color="#10B981" formatNumber={formatNumber} />
                     </View>
                 </View>
 
@@ -139,7 +145,7 @@ export function CaloriesScreen() {
                                     </View>
                                     <View>
                                         <Text style={styles.mealTitle}>{group.label}</Text>
-                                        <Text style={styles.mealSummary}>{meal.totalCalories} kcal • {meal.protein}g P • {meal.carbs}g C • {meal.fat}g F</Text>
+                                        <Text style={styles.mealSummary}>{formatNumber(meal.totalCalories)} kcal • {formatNumber(meal.protein)}g P • {formatNumber(meal.carbs)}g C • {formatNumber(meal.fat)}g F</Text>
                                     </View>
                                 </View>
                                 <Button title="Thêm" onPress={() => handleOpenSearch(group.key)} style={styles.addMealButton} />
@@ -182,11 +188,11 @@ export function CaloriesScreen() {
     );
 }
 
-function MacroTile({ label, consumed, goal, color }: { label: string; consumed: number; goal: number; color: string }) {
+function MacroTile({ label, consumed, goal, color, formatNumber }: { label: string; consumed: number; goal: number; color: string; formatNumber: (num: number) => string }) {
     return (
         <View style={[styles.macroTile, { borderColor: color }]}>
             <Text style={styles.macroLabel}>{label}</Text>
-            <Text style={[styles.macroValue, { color }]}>{consumed}g / {goal}g</Text>
+            <Text style={[styles.macroValue, { color }]}>{formatNumber(consumed)}g {goal > 0 ? `/ ${formatNumber(goal)}g` : ""}</Text>
         </View>
     );
 }
@@ -323,7 +329,7 @@ const styles = StyleSheet.create({
     },
     mealSummary: {
         color: "#94A3B8",
-        fontSize: 12,
+        fontSize: 9,
         marginTop: 4,
     },
     addMealButton: {

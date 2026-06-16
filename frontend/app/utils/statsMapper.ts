@@ -33,6 +33,7 @@ export function mapDashboardToHealthData(dashboard: any, current: any) {
     );
 
     const currentWeight = finiteOrCurrent(Number(latestBmiEntry.weight || latestBmiEntry.bmi || 0), current.currentWeight ?? 0);
+    const targetWeight = finiteOrCurrent(Number((dd?.profile?.targetWeight ?? dd?.profile?.target_weight) || 0), current.targetWeight ?? 0);
     const waterTotal = finiteOrCurrent(Number(dd?.water?.totalAmount || 0), current.waterIntake ?? 0);
     const waterGoal = finiteOrCurrent(Number(dd?.water?.goal || 0), current.waterGoal ?? 2000);
 
@@ -41,6 +42,7 @@ export function mapDashboardToHealthData(dashboard: any, current: any) {
         tdee,
         calorieGoal,
         currentWeight,
+        targetWeight,
         weightHistory,
         waterHistory,
         waterIntake: waterTotal,

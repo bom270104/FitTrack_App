@@ -21,13 +21,41 @@ interface Goal {
 }
 
 export function GoalsScreen() {
-    const { healthData, setScreen, authFetch } = useApp();
+    const { healthData, userData, setScreen, authFetch } = useApp();
     const [goals, setGoals] = useState<Goal[]>([]);
 
     const [showAddGoal, setShowAddGoal] = useState(false);
     const [newGoal, setNewGoal] = useState({ title: "", target: "", unit: "kg" });
     const [showEditGoal, setShowEditGoal] = useState(false);
     const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+
+    const asNumber = (value: any, fallback = 0) => {
+        if (value == null) return fallback;
+        if (typeof value === "number") return value;
+        if (typeof value === "string" && value.trim() !== "") return Number(value) || fallback;
+        return fallback;
+    };
+
+    const buildWeightGoalFallback = (): Goal | null => {
+        const targetWeightValue = asNumber(healthData?.targetWeight, asNumber(userData?.targetWeight));
+        if (!targetWeightValue || targetWeightValue <= 0) {
+            return null;
+        }
+
+        const currentWeightValue = asNumber(healthData?.currentWeight, asNumber(userData?.weight));
+        return {
+            id: "weight-goal",
+            title: "Mục tiêu cân nặng",
+            target: `${targetWeightValue} kg`,
+            current: currentWeightValue,
+            max: targetWeightValue,
+            unit: "kg",
+            icon: "target",
+            tint: colors.primarySoft,
+            color: colors.primary,
+            completed: currentWeightValue > 0 && currentWeightValue === targetWeightValue,
+        };
+    };
 
     const loadGoals = async () => {
         try {
@@ -39,13 +67,23 @@ export function GoalsScreen() {
                 let unit = g.unit ?? "";
                 const titleLower = String(g.title || "").toLowerCase();
                 const targetLower = String(g.target || "").toLowerCase();
-                if (!unit && (titleLower.includes("nước") || titleLower.includes("nuoc") || targetLower.includes("ml"))) {
-                    unit = "ml";
+                const hasWeightLabel = titleLower.includes("cân") || titleLower.includes("tăng") || titleLower.includes("giảm") || targetLower.includes("kg");
+                const hasWaterLabel = titleLower.includes("nước") || titleLower.includes("nuoc") || targetLower.includes("ml");
+                const hasCalorieLabel = titleLower.includes("calo") || titleLower.includes("kcal") || targetLower.includes("kcal");
+
+                if (!unit) {
+                    if (hasWaterLabel) {
+                        unit = "ml";
+                    } else if (hasWeightLabel) {
+                        unit = "kg";
+                    } else if (hasCalorieLabel) {
+                        unit = "kcal";
+                    }
                 }
-                let maxVal = Number.isFinite(Number(g.max)) ? Number(g.max) : undefined;
+
                 const parsedTarget = Number(String(g.target ?? "").replace(/[^0-9.]/g, ""));
                 const targetValue = Number.isFinite(parsedTarget) && parsedTarget > 0 ? parsedTarget : undefined;
-
+                let maxVal = Number.isFinite(Number(g.max)) ? Number(g.max) : undefined;
                 if (targetValue) {
                     maxVal = targetValue;
                 }
@@ -56,37 +94,63 @@ export function GoalsScreen() {
                 }
 
                 const finalMax = Number.isFinite(Number(maxVal)) ? Number(maxVal) : 1;
-                const targetText = g.target ?? (unit === "ml" ? `${finalMax} ml` : String(finalMax));
+                const targetText = g.target ?? (unit === "ml" ? `${finalMax} ml` : unit === "kg" ? `${finalMax} kg` : String(finalMax));
 
-                // prefer live water intake for ml goals when goal current is missing
-                let currentVal = Number.isFinite(Number(g.current)) ? Number(g.current) : 0;
+                let currentVal = Number.isFinite(Number(g.current)) ? Number(g.current) : NaN;
                 if (unit === "ml") {
                     if (!Number.isFinite(currentVal) || currentVal <= 0) {
-                        currentVal = healthData?.waterIntake ?? 0;
+                        currentVal = asNumber(healthData?.waterIntake);
                     }
+                } else if (unit === "kg") {
+                    if (!Number.isFinite(currentVal) || currentVal <= 0) {
+                        currentVal = asNumber(healthData?.currentWeight, asNumber(userData?.weight));
+                    }
+                } else if (unit === "kcal") {
+                    if (!Number.isFinite(currentVal) || currentVal <= 0) {
+                        currentVal = asNumber(healthData?.dailyCalories);
+                    }
+                } else {
+                    if (!Number.isFinite(currentVal) || currentVal <= 0) {
+                        currentVal = asNumber(healthData?.currentWeight, asNumber(userData?.weight));
+                    }
+                }
+
+                if (!Number.isFinite(currentVal)) {
+                    currentVal = 0;
                 }
 
                 return {
                     id: g._id,
-                    title: g.title,
+                    title: g.title ?? "",
                     target: targetText,
                     current: currentVal,
-                    max: Number.isFinite(Number(maxVal)) ? Number(maxVal) : 1,
-                    unit: unit,
-                    icon: g.icon ?? "target",
-                    tint: g.tint ?? colors.primarySoft,
-                    color: g.color ?? colors.primary,
+                    max: finalMax,
+                    unit,
+                    icon: g.icon || "target",
+                    tint: g.tint || colors.primarySoft,
+                    color: g.color || colors.primary,
                     completed: !!g.completed,
                 };
             });
-            setGoals(mapped);
+            const weightGoalFallback = buildWeightGoalFallback();
+            const hasExistingWeightGoal = mapped.some((goal) =>
+                goal.unit === "kg" ||
+                goal.title.toLowerCase().includes("cân") ||
+                goal.title.toLowerCase().includes("giảm") ||
+                goal.title.toLowerCase().includes("tăng") ||
+                String(goal.target).toLowerCase().includes("kg"),
+            );
+
+            setGoals(weightGoalFallback && !hasExistingWeightGoal ? [weightGoalFallback, ...mapped] : mapped);
         } catch (err) {
             // noop
         }
     };
 
     const addGoal = async () => {
-        if (!newGoal.title.trim() || !newGoal.target.trim()) return;
+        if (!newGoal.title.trim() || !newGoal.target.trim()) {
+            return;
+        }
 
         try {
             const res = await authFetch("/api/goals", {
@@ -106,11 +170,11 @@ export function GoalsScreen() {
             if (g) {
                 const mapped: Goal = {
                     id: g._id,
-                    title: g.title,
-                    target: g.target,
-                    current: g.current ?? 0,
-                    max: g.max ?? 1,
-                    unit: g.unit ?? "",
+                    title: g.title ?? newGoal.title.trim(),
+                    target: g.target ?? newGoal.target.trim(),
+                    current: Number.isFinite(Number(g.current)) ? Number(g.current) : 0,
+                    max: Number.isFinite(Number(g.max)) ? Number(g.max) : Number(String(newGoal.target).replace(/[^0-9.]/g, "")) || 1,
+                    unit: g.unit ?? newGoal.unit,
                     icon: g.icon ?? "target",
                     tint: g.tint ?? colors.primarySoft,
                     color: g.color ?? colors.primary,
@@ -173,7 +237,16 @@ export function GoalsScreen() {
     React.useEffect(() => {
         void loadGoals();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [healthData?.waterGoal, healthData?.waterIntake]);
+    }, [healthData?.waterGoal, healthData?.waterIntake, healthData?.currentWeight, healthData?.targetWeight, userData?.targetWeight, userData?.weight]);
+
+    const weeklyProgress = Math.round(
+        goals.length > 0
+            ? goals.reduce((sum, goal) => {
+                const percent = goal.max > 0 ? Math.min(Math.max((goal.current / goal.max) * 100, 0), 100) : 0;
+                return sum + percent;
+            }, 0) / goals.length
+            : 0,
+    );
 
     return (
         <View style={styles.root}>
@@ -194,11 +267,11 @@ export function GoalsScreen() {
                     <View style={styles.heroTop}>
                         <View>
                             <Text style={styles.heroLabel}>Tiến độ tuần</Text>
-                            <Text style={styles.heroValue}>78%</Text>
+                            <Text style={styles.heroValue}>{weeklyProgress}%</Text>
                         </View>
                         <View style={styles.circularProgress}>
                             <View style={styles.circularTrack} />
-                            <View style={styles.circularCenter}>
+                            <View style={[styles.circularCenter, { backgroundColor: colors.primary }]}>
                                 <MaterialCommunityIcons name="target" size={24} color="#FFFFFF" />
                             </View>
                         </View>
@@ -295,7 +368,9 @@ export function GoalsScreen() {
                                             <Text style={styles.progressMetaText}>{goal.current} / {displayMax} {goal.unit}</Text>
                                             <Text style={[styles.progressMetaText, goal.completed && styles.progressDone]}>{isFinite(progress) ? `${progress}%` : "0%"}</Text>
                                         </View>
-                                        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.min(isFinite(progress) ? progress : 0, 100)}%`, backgroundColor: goal.color }]} /></View>
+                                        <View style={styles.progressTrack}>
+                                            <View style={[styles.progressFill, { width: `${Math.min(isFinite(progress) ? progress : 0, 100)}%`, backgroundColor: goal.color || colors.primary }]} />
+                                        </View>
                                     </View>
                                 </View>
                             </View>

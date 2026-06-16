@@ -17,8 +17,8 @@ export function StatisticsScreen() {
         const bmiChange = weights.length > 1 ? Number((weights[weights.length - 1].weight - weights[0].weight).toFixed(1)) : 0;
 
         return [
-            { label: "Cân nặng TB", value: avgWeight.toFixed(1), unit: "kg", change: `${bmiChange <= 0 ? "" : "+"}${bmiChange.toFixed(1)}kg`, positive: bmiChange <= 0, icon: "scale-balance", tint: colors.primarySoft, color: colors.primary },
-            { label: "Nước TB", value: Math.round(avgWater).toLocaleString(), unit: "ml", change: healthData.waterIntake >= healthData.waterGoal ? "Đạt mục tiêu" : "Chưa đạt", positive: healthData.waterIntake >= healthData.waterGoal, icon: "water-outline", tint: colors.secondarySoft, color: colors.secondary },
+            { label: "Cân nặng", value: avgWeight.toFixed(1), unit: "kg", change: `${bmiChange <= 0 ? "" : "+"}${bmiChange.toFixed(1)}kg`, positive: bmiChange <= 0, icon: "scale-balance", tint: colors.primarySoft, color: colors.primary },
+            { label: "Nước", value: Math.round(avgWater).toLocaleString(), unit: "ml", change: avgWater >= healthData.waterGoal ? "Đạt mục tiêu" : "Chưa đạt", positive: avgWater >= healthData.waterGoal, icon: "water-outline", tint: colors.secondarySoft, color: colors.secondary },
             { label: "Calo TB", value: Math.round(healthData.dailyCalories).toLocaleString(), unit: "kcal", change: `${healthData.calorieGoal - healthData.dailyCalories >= 0 ? "-" : "+"}${Math.abs(healthData.calorieGoal - healthData.dailyCalories)}`, positive: healthData.dailyCalories <= healthData.calorieGoal, icon: "fire", tint: colors.accentSoft, color: colors.accent },
             { label: "Thay đổi BMI", value: Number(healthData.bmi).toFixed(1), unit: "kg/m2", change: "BMI hiện tại", positive: true, icon: "trending-down", tint: "rgba(139,92,246,0.10)", color: "#8B5CF6" },
         ];
