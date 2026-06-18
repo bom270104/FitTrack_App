@@ -21,9 +21,49 @@ export function startScheduler() {
           ? `${user.fullName} <${user.email}>`
           : `user:${s.userId}`;
 
+<<<<<<< HEAD
         if (!user || !user.email) {
           console.log(`[scheduler] Skipped reminder for ${who} (no email)`);
           continue;
+=======
+                if (!user || !user.email) {
+                    console.log(`[scheduler] Skipped reminder for ${who} (no email)`);
+                    continue;
+                }
+
+                const lastSentAt = s.lastSent ? new Date(s.lastSent) : null;
+                const intervalVal = Number(s.intervalHours || 3);
+                const isMinute = s.intervalUnit === "minute";
+                const intervalMs = isMinute ? intervalVal * 60 * 1000 : intervalVal * 60 * 60 * 1000;
+                const shouldSend = !lastSentAt || (now.getTime() - lastSentAt.getTime()) >= intervalMs;
+
+                if (!shouldSend) {
+                    continue;
+                }
+
+                const [startHH] = (s.startTime || "08:00").split(":");
+                const [endHH] = (s.endTime || "22:00").split(":");
+                const start = Number(startHH || 0);
+                const end = Number(endHH || 23);
+                const hour = now.getHours();
+
+                if (hour < start || hour > end) {
+                    continue;
+                }
+
+                try {
+                    const subj = `Nhắc nhở uống nước - FitTrack`;
+                    const body = `Hi ${user.fullName || "user"},\n\nĐã đến hẹn uống nước rồi bạn nhé.\n\n— FitTrack`;
+                    await sendMail({ to: user.email, subject: subj, text: body });
+                    await markLastSent(s.userId, new Date());
+                    console.log(`[scheduler] Sent reminder email to ${who} at ${now.toISOString()}`);
+                } catch (err) {
+                    console.error(`[scheduler] Failed sending reminder to ${who}:`, err.message || err);
+                }
+            }
+        } catch (err) {
+            console.error("[scheduler] error", err);
+>>>>>>> 9e9779d41f31267d2fe8003572350c0b3e3e105d
         }
 
         const lastSentAt = s.lastSent ? new Date(s.lastSent) : null;

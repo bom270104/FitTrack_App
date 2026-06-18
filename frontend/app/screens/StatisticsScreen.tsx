@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useApp } from "../app-context";
@@ -6,33 +6,76 @@ import { BottomNav } from "../bottom-nav";
 import { colors, shadow } from "../theme";
 
 export function StatisticsScreen() {
-    const { healthData, setScreen } = useApp();
+    const { healthData, setScreen, authFetch } = useApp();
     const [range, setRange] = useState<"Week" | "Month" | "Year">("Week");
+    const [overrideWaterGoal, setOverrideWaterGoal] = useState<number | null>(null);
+
+    useEffect(() => {
+        let mounted = true;
+
+        async function loadGoals() {
+            try {
+                if (!authFetch) return;
+                const res = await authFetch("/api/goals");
+                if (!res || !res.ok) return;
+                const body = (await res.json()) as any;
+                const serverGoals = Array.isArray(body.data?.goals) ? body.data.goals : [];
+                for (const g of serverGoals) {
+                    const unit = g.unit ?? "";
+                    const title = String(g.title || "").toLowerCase();
+                    const target = String(g.target || "").toLowerCase();
+                    if (unit === "ml" || title.includes("nước") || title.includes("nuoc") || target.includes("ml")) {
+                        const parsedTarget = Number(String(g.target ?? "").replace(/[^0-9.]/g, ""));
+                        const parsedMax = Number(String(g.max ?? "").replace(/[^0-9.]/g, ""));
+                        const val = Number.isFinite(parsedTarget) && parsedTarget > 1 ? parsedTarget : Number.isFinite(parsedMax) && parsedMax > 1 ? parsedMax : null;
+                        if (mounted && val) {
+                            setOverrideWaterGoal(val);
+                            return;
+                        }
+                    }
+                }
+                if (mounted) setOverrideWaterGoal(null);
+            } catch (err) {
+                // noop
+            }
+        }
+
+        void loadGoals();
+
+        return () => {
+            mounted = false;
+        };
+    }, [authFetch]);
+
+    const effectiveWaterGoal = overrideWaterGoal ?? Number(healthData.waterGoal || 2000);
 
     const derivedStats = useMemo(() => {
         const weights = healthData.weightHistory || [];
-        const waters = healthData.waterHistory || [];
         const avgWeight = weights.length ? weights.reduce((sum, item) => sum + Number(item.weight || 0), 0) / weights.length : healthData.currentWeight;
-        const avgWater = waters.length ? waters.reduce((sum, item) => sum + Number(item.amount || 0), 0) / waters.length : healthData.waterIntake;
+
+        // Today's actual water intake (from /api/water/today) — used for the stat card
+        // The chart already shows historical daily breakdown visually
+        const todayWater = healthData.waterIntake;
+
         const bmiChange = weights.length > 1 ? Number((weights[weights.length - 1].weight - weights[0].weight).toFixed(1)) : 0;
 
         return [
-            { label: "Cân nặng TB", value: avgWeight.toFixed(1), unit: "kg", change: `${bmiChange <= 0 ? "" : "+"}${bmiChange.toFixed(1)}kg`, positive: bmiChange <= 0, icon: "scale-balance", tint: colors.primarySoft, color: colors.primary },
-            { label: "Nước TB", value: Math.round(avgWater).toLocaleString(), unit: "ml", change: healthData.waterIntake >= healthData.waterGoal ? "Đạt mục tiêu" : "Chưa đạt", positive: healthData.waterIntake >= healthData.waterGoal, icon: "water-outline", tint: colors.secondarySoft, color: colors.secondary },
+            { label: "Cân nặng", value: avgWeight.toFixed(1), unit: "kg", change: `${bmiChange <= 0 ? "" : "+"}${bmiChange.toFixed(1)}kg`, positive: bmiChange <= 0, icon: "scale-balance", tint: colors.primarySoft, color: colors.primary },
+            { label: "Nước hôm nay", value: Math.round(todayWater).toLocaleString(), unit: "ml", change: todayWater >= effectiveWaterGoal ? "Đạt mục tiêu" : `Còn ${Math.round(effectiveWaterGoal - todayWater)}ml`, positive: todayWater >= effectiveWaterGoal, icon: "water-outline", tint: colors.secondarySoft, color: colors.secondary },
             { label: "Calo TB", value: Math.round(healthData.dailyCalories).toLocaleString(), unit: "kcal", change: `${healthData.calorieGoal - healthData.dailyCalories >= 0 ? "-" : "+"}${Math.abs(healthData.calorieGoal - healthData.dailyCalories)}`, positive: healthData.dailyCalories <= healthData.calorieGoal, icon: "fire", tint: colors.accentSoft, color: colors.accent },
             { label: "Thay đổi BMI", value: Number(healthData.bmi).toFixed(1), unit: "kg/m2", change: "BMI hiện tại", positive: true, icon: "trending-down", tint: "rgba(139,92,246,0.10)", color: "#8B5CF6" },
         ];
-    }, [healthData]);
+    }, [healthData, effectiveWaterGoal]);
 
     const chartWeightData = useMemo(() => {
-        const items = healthData.weightHistory || [];
+        const items = (healthData.weightHistory || []).slice().sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
         if (range === "Week") return items.slice(-7);
         if (range === "Month") return items.slice(-30);
         return items;
     }, [healthData.weightHistory, range]);
 
     const chartWaterData = useMemo(() => {
-        const items = healthData.waterHistory || [];
+        const items = (healthData.waterHistory || []).slice().sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
         if (range === "Week") return items.slice(-7);
         if (range === "Month") return items.slice(-30);
         return items;
@@ -95,6 +138,20 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
     );
 }
 
+const formatChartLabel = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return date.getHours() || date.getMinutes() ? `${day}/${month} ${hours}:${minutes}` : `${day}/${month}`;
+};
+
 function LineChart({ data, color }: { data: Array<{ date: string; weight: number }>; color: string }) {
     const values = data.map((item) => Number(item.weight || 0));
     const min = Math.min(...values, 0);
@@ -122,7 +179,7 @@ function LineChart({ data, color }: { data: Array<{ date: string; weight: number
             </View>
             <View style={styles.axisRow}>
                 {data.map((item, index) => (
-                    <Text key={`${item.date}-${index}`} style={styles.axisLabel}>{item.date}</Text>
+                    <Text key={`${item.date}-${index}`} style={styles.axisLabel}>{formatChartLabel(item.date)}</Text>
                 ))}
             </View>
         </View>
@@ -144,7 +201,7 @@ function BarChart({ data, color }: { data: Array<{ date: string; amount: number 
             </View>
             <View style={styles.axisRow}>
                 {data.map((item, index) => (
-                    <Text key={`${item.date}-${index}`} style={styles.axisLabel}>{item.date}</Text>
+                    <Text key={`${item.date}-${index}`} style={styles.axisLabel}>{formatChartLabel(item.date)}</Text>
                 ))}
             </View>
         </View>

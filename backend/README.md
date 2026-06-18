@@ -37,7 +37,17 @@ CORS_ORIGIN=*
 npm install
 ```
 
-## 5. Chạy backend
+## 5. Seed food catalog
+
+Nếu bạn muốn nạp danh sách thực phẩm mẫu vào cơ sở dữ liệu, chạy từ thư mục `backend`:
+
+```bash
+npm run seed:foods
+```
+
+Nếu bản ghi đã tồn tại, script sẽ bỏ qua và không chèn lại.
+
+## 6. Chạy backend
 
 ```bash
 npm start
@@ -48,7 +58,7 @@ Nếu đúng cấu hình, terminal sẽ hiện:
 - `MongoDB connected`
 - `Server running on port 5000`
 
-## 6. Kiểm tra nhanh
+## 7. Kiểm tra nhanh
 
 1. Mở Postman hoặc browser.
 2. Gọi `GET http://localhost:5000/api/status`.

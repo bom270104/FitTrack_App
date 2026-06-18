@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon src/server.js",
+    "migrate:goals:set-max": "node src/tools/migrateGoalsSetMax.js",
     "start": "node src/server.js",
+    "seed:foods": "node src/utils/seedFoods.js",
     "test": "vitest run"
   },
   "keywords": [],

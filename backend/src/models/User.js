@@ -67,6 +67,11 @@ const userSchema = new Schema(
       trim: true,
     },
 
+    profileComplete: {
+      type: Boolean,
+      default: false,
+    },
+
     dailyWaterGoal: {
       type: Number,
       min: [1, "Daily water goal must be greater than 0"],

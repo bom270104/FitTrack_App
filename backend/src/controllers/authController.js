@@ -40,9 +40,13 @@ export const login = asyncHandler(async (req, res) => {
   const payload = validateLoginInput(req.body);
   const { user, token } = await loginUser(payload);
 
+  const profileComplete = Boolean(
+    user && typeof user.age === "number" && typeof user.height === "number" && typeof user.weight === "number"
+  );
+
   return sendSuccess(res, {
     message: "Login successful",
-    data: { user, token },
+    data: { user, token, profileComplete },
   });
 });
 

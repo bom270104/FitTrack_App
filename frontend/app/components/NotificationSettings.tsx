@@ -9,6 +9,7 @@ import { colors, shadow } from "../theme";
 type Setting = {
     enabled?: boolean;
     intervalHours?: number;
+    intervalUnit?: "hour" | "minute";
     startTime?: string;
     endTime?: string;
 };
@@ -16,7 +17,7 @@ type Setting = {
 export function NotificationSettings({ visible, onClose }: { visible: boolean; onClose: () => void }) {
     const { authFetch } = useApp();
     const [loading, setLoading] = useState(false);
-    const [setting, setSetting] = useState<Setting>({ enabled: true, intervalHours: 3, startTime: "08:00", endTime: "22:00" });
+    const [setting, setSetting] = useState<Setting>({ enabled: true, intervalHours: 3, intervalUnit: "hour", startTime: "08:00", endTime: "22:00" });
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
@@ -166,8 +167,24 @@ export function NotificationSettings({ visible, onClose }: { visible: boolean; o
                     </View>
 
                     <View style={styles.field}>
-                        <Text style={styles.label}>Khoảng (giờ)</Text>
-                        <Input value={String(setting.intervalHours ?? 3)} onChangeText={(text) => setSetting((current) => ({ ...current, intervalHours: Number(text) }))} keyboardType="numeric" style={styles.input} />
+                        <Text style={styles.label}>Khoảng thời gian nhắc nhở</Text>
+                        <View style={styles.intervalRow}>
+                            <Input value={String(setting.intervalHours ?? 3)} onChangeText={(text) => setSetting((current) => ({ ...current, intervalHours: Number(text) }))} keyboardType="numeric" style={[styles.input, styles.intervalInput]} />
+                            <View style={styles.unitSelector}>
+                                <Pressable
+                                    onPress={() => setSetting((current) => ({ ...current, intervalUnit: "hour" }))}
+                                    style={[styles.unitPill, (setting.intervalUnit ?? "hour") === "hour" && styles.unitPillActive]}
+                                >
+                                    <Text style={[styles.unitPillText, (setting.intervalUnit ?? "hour") === "hour" && styles.unitPillTextActive]}>Giờ</Text>
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => setSetting((current) => ({ ...current, intervalUnit: "minute" }))}
+                                    style={[styles.unitPill, setting.intervalUnit === "minute" && styles.unitPillActive]}
+                                >
+                                    <Text style={[styles.unitPillText, setting.intervalUnit === "minute" && styles.unitPillTextActive]}>Phút</Text>
+                                </Pressable>
+                            </View>
+                        </View>
                     </View>
 
                     <View style={styles.rowGap}>
@@ -234,6 +251,38 @@ const styles = StyleSheet.create({
     field: {
         gap: 8,
         marginBottom: 12,
+    },
+    intervalRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
+    intervalInput: {
+        flex: 1,
+    },
+    unitSelector: {
+        flexDirection: "row",
+        backgroundColor: colors.mutedSoft,
+        borderRadius: 12,
+        padding: 3,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    unitPill: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 9,
+    },
+    unitPillActive: {
+        backgroundColor: colors.primary,
+    },
+    unitPillText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: colors.muted,
+    },
+    unitPillTextActive: {
+        color: "#FFFFFF",
     },
     fieldHalf: {
         flex: 1,

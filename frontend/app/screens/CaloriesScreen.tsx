@@ -1,195 +1,198 @@
-import React, { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useMemo, useState, useEffect } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { useApp } from "../app-context";
 import { BottomNav } from "../bottom-nav";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { colors, shadow } from "../theme";
+import { SearchFoodModal } from "../components/SearchFoodModal";
 
-const genderOptions = [
-    { label: "Nam", value: "male" },
-    { label: "Nữ", value: "female" },
-    { label: "Khác", value: "other" },
-];
-
-const activityOptions = [
-    { label: "Ít vận động", value: "sedentary" },
-    { label: "Vận động nhẹ", value: "light" },
-    { label: "Vận động vừa", value: "moderate" },
-    { label: "Vận động nhiều", value: "active" },
-    { label: "Rất năng động", value: "very_active" },
-];
-
-const goalOptions = [
-    { label: "Tăng cân", value: "gain", delta: 300 },
-    { label: "Giảm cân", value: "lose", delta: -300 },
-    { label: "Giữ cân", value: "maintain", delta: 0 },
+const mealGroups: Array<{ key: "breakfast" | "lunch" | "dinner" | "snack"; label: string; icon: string }> = [
+    { key: "breakfast", label: "Bữa sáng", icon: "coffee" },
+    { key: "lunch", label: "Bữa trưa", icon: "silverware-fork-knife" },
+    { key: "dinner", label: "Bữa tối", icon: "food-steak" },
+    { key: "snack", label: "Bữa phụ", icon: "cookie" },
 ];
 
 export function CaloriesScreen() {
-    const { userData, healthData, setScreen, refreshHealth, authFetch, updateCaloriesResult } = useApp();
-    const [height, setHeight] = useState(String(userData?.height ?? ""));
-    const [weight, setWeight] = useState(String(userData?.weight ?? ""));
-    const [age, setAge] = useState(String(userData?.age ?? ""));
-    const [gender, setGender] = useState(userData?.gender ?? "male");
-    const [activityLevel, setActivityLevel] = useState(userData?.activityLevel ?? "moderate");
-    const [goal, setGoal] = useState(userData?.goal ?? "maintain");
-    const [result, setResult] = useState<{ bmr: number; tdee: number; recommendedCalories: number } | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const { todayMeals, mealTotals, healthData, searchFoods, logMeal, deleteLoggedFood, setScreen, refreshHealth } = useApp();
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedMeal, setSelectedMeal] = useState<"breakfast" | "lunch" | "dinner" | "snack">("breakfast");
+    const [modalLoading, setModalLoading] = useState(false);
+    const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+    const [displayCalories, setDisplayCalories] = useState(0);
 
-    const selectedGoal = useMemo(() => goalOptions.find((item) => item.value === goal) ?? goalOptions[2], [goal]);
-
-    const calculateCalories = async () => {
-        setError(null);
-        setLoading(true);
-
-        try {
-            const res = await authFetch("/api/calories/calculate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    weight: Number(weight),
-                    height: Number(height),
-                    age: Number(age),
-                    gender,
-                    activityLevel,
-                    goal,
-                }),
-            });
-
-            if (!res) {
-                setError("Không thể kết nối máy chủ");
-                return;
-            }
-
-            const body = (await res.json()) as any;
-
-            if (!res.ok) {
-                setError(body.message || "Unable to calculate calories");
-                return;
-            }
-
-            const nextResult = {
-                bmr: body.data?.bmr ?? 0,
-                tdee: body.data?.tdee ?? 0,
-                recommendedCalories: body.data?.recommendedCalories ?? 0,
-            };
-
-            setResult(nextResult);
-            updateCaloriesResult({
-                tdee: nextResult.tdee,
-                calorieGoal: nextResult.recommendedCalories,
-                bmr: nextResult.bmr,
-            });
-            await refreshHealth();
-        } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error(error);
-            setError("Network error");
-            Toast.show({ type: "error", text1: "Thông báo", text2: "Không thể tính TDEE lúc này" });
-        } finally {
-            setLoading(false);
+    const progressPercent = useMemo(() => {
+        if (!healthData.calorieGoal || healthData.calorieGoal <= 0) {
+            return 0;
         }
+        return Math.min(100, Math.round((healthData.dailyCalories / healthData.calorieGoal) * 100));
+    }, [healthData.calorieGoal, healthData.dailyCalories]);
+
+    useEffect(() => {
+        const targetCalories = healthData.dailyCalories;
+        if (displayCalories === targetCalories) return;
+
+        const duration = 800;
+        const startTime = Date.now();
+        const diff = targetCalories - displayCalories;
+
+        const animationFrame = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(1, elapsed / duration);
+            setDisplayCalories(Math.round(displayCalories + diff * progress));
+
+            if (progress >= 1) {
+                setDisplayCalories(targetCalories);
+                clearInterval(animationFrame);
+            }
+        }, 16);
+
+        return () => clearInterval(animationFrame);
+    }, [healthData.dailyCalories]);
+
+    const selectedMealGroup = todayMeals[selectedMeal];
+
+    const formatNumber = (num: number): string => {
+        if (!Number.isFinite(num)) return "0";
+        const rounded = Math.round(num * 10) / 10;
+        return rounded.toFixed(1).replace(/\.0$/, "");
+    };
+
+    const handleOpenSearch = (mealType: "breakfast" | "lunch" | "dinner" | "snack") => {
+        setSelectedMeal(mealType);
+        setModalVisible(true);
+    };
+
+    const handleAddFood = async (food: { _id: string; name: string; calories: number; protein: number; carbs: number; fat: number; servingSize: number }, weightGrams: number) => {
+        setModalLoading(true);
+        const success = await logMeal(selectedMeal, food._id, weightGrams);
+        setModalLoading(false);
+
+        if (success) {
+            Toast.show({ type: "success", text1: "Đã thêm", text2: `${food.name} vào ${selectedMealGroup.mealType}` });
+            setModalVisible(false);
+            await refreshHealth();
+            return;
+        }
+
+        Toast.show({ type: "error", text1: "Lỗi", text2: "Không thể thêm thực phẩm" });
+    };
+
+    const handleRemoveFood = async (logId: string | null, foodId: string, name: string) => {
+        if (!logId) {
+            return;
+        }
+
+        Alert.alert("Xóa món ăn", `Bạn có chắc muốn xóa ${name} không?`, [
+            { text: "Hủy", style: "cancel" },
+            {
+                text: "Xóa",
+                style: "destructive",
+                onPress: async () => {
+                    setDeleteLoadingId(foodId);
+                    const success = await deleteLoggedFood(logId, foodId);
+                    setDeleteLoadingId(null);
+                    if (success) {
+                        Toast.show({ type: "success", text1: "Đã xóa", text2: `${name} đã được xóa` });
+                        await refreshHealth();
+                    } else {
+                        Toast.show({ type: "error", text1: "Lỗi", text2: "Không thể xóa thực phẩm" });
+                    }
+                },
+            },
+        ]);
     };
 
     return (
         <View style={styles.root}>
             <View style={styles.header}>
-                <Pressable onPress={() => setScreen("dashboard")} style={styles.backButton}>
-                    <MaterialCommunityIcons name="arrow-left" size={22} color={colors.foreground} />
+                <Pressable onPress={() => setScreen("dashboard")} style={styles.headerBack}>
+                    <MaterialCommunityIcons name="arrow-left" size={20} color="#F8FAFC" />
                 </Pressable>
-                <Text style={styles.headerTitle}>TDEE Calculator</Text>
+                <View>
+                    <Text style={styles.screenTitle}>Lượng calo & Dinh dưỡng</Text>
+                    <Text style={styles.screenSubTitle}>Theo dõi bữa ăn hàng ngày của bạn</Text>
+                </View>
             </View>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <LinearHero tdee={healthData.tdee} goalLabel={selectedGoal.label} calorieGoal={healthData.calorieGoal} />
-
-                <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>Nhập dữ liệu</Text>
-                    <View style={styles.grid}>
-                        <Field label="Chiều cao (cm)"><Input value={height} onChangeText={setHeight} keyboardType="numeric" style={styles.input} /></Field>
-                        <Field label="Cân nặng (kg)"><Input value={weight} onChangeText={setWeight} keyboardType="numeric" style={styles.input} /></Field>
-                        <Field label="Tuổi"><Input value={age} onChangeText={setAge} keyboardType="numeric" style={styles.input} /></Field>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <View style={styles.heroCard}>
+                    <View style={styles.heroTop}>
+                        <Text style={styles.heroTitle}>Mục tiêu calo</Text>
+                        <Text style={styles.heroValue}>{displayCalories.toLocaleString()} / {healthData.calorieGoal.toLocaleString()} kcal</Text>
                     </View>
-
-                    <OptionGroup label="Giới tính" items={genderOptions} selected={gender} onChange={setGender} />
-                    <OptionGroup label="Mức độ hoạt động" items={activityOptions} selected={activityLevel} onChange={setActivityLevel} />
-                    <OptionGroup label="Mục tiêu" items={goalOptions} selected={goal} onChange={setGoal} />
-
-                    {error ? <Text style={styles.error}>{error}</Text> : null}
-
-                    <Button onPress={calculateCalories} disabled={loading} title={loading ? "Đang tính..." : "Tính TDEE"} style={styles.primaryButton} />
+                    <View style={styles.progressTrack}>
+                        <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+                    </View>
+                    <Text style={styles.progressText}>{progressPercent}% của mục tiêu</Text>
+                    <View style={styles.macroRow}>
+                        <MacroTile label="P" consumed={mealTotals.protein} goal={healthData.proteinGoal} color="#3B82F6" formatNumber={formatNumber} />
+                        <MacroTile label="C" consumed={mealTotals.carbs} goal={healthData.carbsGoal} color="#F59E0B" formatNumber={formatNumber} />
+                        <MacroTile label="F" consumed={mealTotals.fat} goal={healthData.fatGoal} color="#10B981" formatNumber={formatNumber} />
+                    </View>
                 </View>
 
-                {result ? (
-                    <View style={styles.card}>
-                        <Text style={styles.sectionTitle}>Kết quả</Text>
-                        <View style={styles.resultRow}>
-                            <ResultTile label="BMR" value={String(result.bmr)} />
-                            <ResultTile label="TDEE" value={String(result.tdee)} />
-                            <ResultTile label="Calo mục tiêu" value={String(result.recommendedCalories)} />
+                {mealGroups.map((group) => {
+                    const meal = todayMeals[group.key];
+                    return (
+                        <View key={group.key} style={styles.mealCard}>
+                            <View style={styles.mealHeader}>
+                                <View style={styles.mealLabelRow}>
+                                    <View style={styles.mealIconContainer}>
+                                        <MaterialCommunityIcons name={group.icon as any} size={18} color="#00C896" />
+                                    </View>
+                                    <View>
+                                        <Text style={styles.mealTitle}>{group.label}</Text>
+                                        <Text style={styles.mealSummary}>{formatNumber(meal.totalCalories)} kcal • {formatNumber(meal.protein)}g P • {formatNumber(meal.carbs)}g C • {formatNumber(meal.fat)}g F</Text>
+                                    </View>
+                                </View>
+                                <Button title="Thêm" onPress={() => handleOpenSearch(group.key)} style={styles.addMealButton} />
+                            </View>
+                            {meal.foods.length === 0 ? (
+                                <Text style={styles.emptyMealText}>Chưa có món ăn nào cho bữa này.</Text>
+                            ) : (
+                                <View style={styles.foodList}>
+                                    {meal.foods.map((item) => (
+                                        <View key={item.foodId} style={styles.foodItem}>
+                                            <View style={styles.foodMain}>
+                                                <Text style={styles.foodName}>{item.name}</Text>
+                                                <Text style={styles.foodMeta}>{item.weightGrams}g • {item.totalCalories} kcal</Text>
+                                            </View>
+                                            <Pressable
+                                                disabled={deleteLoadingId === item.foodId}
+                                                onPress={() => handleRemoveFood(meal.logId, item.foodId, item.name)}
+                                                style={styles.deleteButton}
+                                            >
+                                                <MaterialCommunityIcons name="trash-can-outline" size={20} color="#F87171" />
+                                            </Pressable>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
                         </View>
-                    </View>
-                ) : null}
+                    );
+                })}
             </ScrollView>
 
+            <SearchFoodModal
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                onSearch={searchFoods}
+                onAdd={handleAddFood}
+                loading={modalLoading}
+            />
             <BottomNav />
         </View>
     );
 }
 
-function LinearHero({ tdee, goalLabel, calorieGoal }: { tdee: number; goalLabel: string; calorieGoal: number }) {
+function MacroTile({ label, consumed, goal, color, formatNumber }: { label: string; consumed: number; goal: number; color: string; formatNumber: (num: number) => string }) {
     return (
-        <View style={styles.hero}>
-            <View style={styles.heroTop}>
-                <View style={styles.heroIcon}>
-                    <MaterialCommunityIcons name="calculator-variant" size={26} color="#FFFFFF" />
-                </View>
-                <View style={{ flex: 1 }}>
-                    <Text style={styles.heroCopy}>Calories based on your body and goal</Text>
-                    <Text style={styles.heroValue}>{tdee} kcal/day</Text>
-                </View>
-            </View>
-            <Text style={styles.heroFooter}>Goal: {goalLabel} • Recommended: {calorieGoal} kcal/day</Text>
-        </View>
-    );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-    return (
-        <View style={styles.field}>
-            <Text style={styles.fieldLabel}>{label}</Text>
-            {children}
-        </View>
-    );
-}
-
-function OptionGroup<T extends { label: string; value: string }>({ label, items, selected, onChange }: { label: string; items: T[]; selected: string; onChange: (value: string) => void }) {
-    return (
-        <View style={styles.optionGroup}>
-            <Text style={styles.fieldLabel}>{label}</Text>
-            <View style={styles.optionWrap}>
-                {items.map((item) => {
-                    const active = item.value === selected;
-                    return (
-                        <Pressable key={item.value} onPress={() => onChange(item.value)} style={[styles.optionPill, active && styles.optionPillActive]}>
-                            <Text style={[styles.optionText, active && styles.optionTextActive]}>{item.label}</Text>
-                        </Pressable>
-                    );
-                })}
-            </View>
-        </View>
-    );
-}
-
-function ResultTile({ label, value }: { label: string; value: string }) {
-    return (
-        <View style={styles.resultTile}>
-            <Text style={styles.resultLabel}>{label}</Text>
-            <Text style={styles.resultValue}>{value}</Text>
+        <View style={[styles.macroTile, { borderColor: color }]}>
+            <Text style={styles.macroLabel}>{label}</Text>
+            <Text style={[styles.macroValue, { color }]}>{formatNumber(consumed)}g {goal > 0 ? `/ ${formatNumber(goal)}g` : ""}</Text>
         </View>
     );
 }
@@ -197,147 +200,176 @@ function ResultTile({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
     root: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: "#0F1117",
+    },
+    scrollContent: {
+        padding: 20,
+        paddingBottom: 120,
+        gap: 16,
     },
     header: {
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
         paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 12,
+        paddingTop: 20,
+        paddingBottom: 8,
     },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: colors.mutedSoft,
+    headerBack: {
+        width: 42,
+        height: 42,
+        borderRadius: 14,
         alignItems: "center",
         justifyContent: "center",
+        backgroundColor: "rgba(255,255,255,0.06)",
     },
-    headerTitle: {
+    screenTitle: {
+        color: "#F8FAFC",
         fontSize: 20,
         fontWeight: "800",
-        color: colors.foreground,
     },
-    content: {
-        paddingHorizontal: 20,
-        paddingBottom: 124,
-        gap: 16,
+    screenSubTitle: {
+        marginTop: 4,
+        color: "#94A3B8",
+        fontSize: 13,
     },
-    hero: {
+    heroCard: {
         borderRadius: 28,
-        backgroundColor: colors.primary,
         padding: 20,
+        backgroundColor: "#1C1E2A",
+        ...shadow,
     },
     heroTop: {
         flexDirection: "row",
-        alignItems: "center",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
         gap: 12,
     },
-    heroIcon: {
-        width: 52,
-        height: 52,
-        borderRadius: 18,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "rgba(255,255,255,0.18)",
-    },
-    heroCopy: {
+    heroTitle: {
+        color: "#94A3B8",
         fontSize: 13,
-        color: "rgba(255,255,255,0.82)",
+        marginBottom: 8,
     },
     heroValue: {
-        marginTop: 4,
-        fontSize: 24,
+        color: "#F8FAFC",
+        fontSize: 22,
         fontWeight: "800",
-        color: "#FFFFFF",
     },
-    heroFooter: {
-        marginTop: 16,
-        fontSize: 13,
-        color: "rgba(255,255,255,0.84)",
-    },
-    card: {
-        borderRadius: 24,
-        backgroundColor: colors.card,
-        padding: 18,
-        ...shadow,
-    },
-    sectionTitle: {
-        marginBottom: 14,
-        fontSize: 14,
-        fontWeight: "700",
-        color: colors.foreground,
-    },
-    grid: {
-        gap: 12,
-    },
-    field: {
-        gap: 8,
-    },
-    fieldLabel: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: colors.muted,
-    },
-    input: {
-        backgroundColor: colors.mutedSoft,
-        fontSize: 16,
-    },
-    optionGroup: {
-        marginTop: 14,
-        gap: 8,
-    },
-    optionWrap: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 8,
-    },
-    optionPill: {
-        paddingHorizontal: 12,
-        paddingVertical: 10,
+    progressTrack: {
+        marginTop: 20,
+        width: "100%",
+        height: 8,
         borderRadius: 999,
-        backgroundColor: colors.mutedSoft,
+        backgroundColor: "rgba(255,255,255,0.08)",
+        overflow: "hidden",
     },
-    optionPillActive: {
-        backgroundColor: colors.primarySoft,
+    progressFill: {
+        height: "100%",
+        borderRadius: 999,
+        backgroundColor: "#00C896",
     },
-    optionText: {
+    progressText: {
+        marginTop: 10,
+        color: "#94A3B8",
         fontSize: 12,
-        fontWeight: "600",
-        color: colors.foreground,
     },
-    optionTextActive: {
-        color: colors.primary,
-    },
-    error: {
-        marginTop: 8,
-        fontSize: 13,
-        color: colors.destructive,
-    },
-    primaryButton: {
-        marginTop: 16,
-        backgroundColor: colors.primary,
-    },
-    resultRow: {
+    macroRow: {
+        marginTop: 18,
         flexDirection: "row",
+        justifyContent: "space-between",
         gap: 10,
     },
-    resultTile: {
+    macroTile: {
         flex: 1,
+        borderWidth: 1,
         borderRadius: 18,
-        backgroundColor: colors.mutedSoft,
-        padding: 14,
+        padding: 16,
+        backgroundColor: "rgba(255,255,255,0.03)",
     },
-    resultLabel: {
+    macroLabel: {
+        color: "#94A3B8",
         fontSize: 12,
-        color: colors.muted,
+        marginBottom: 6,
+        fontWeight: "700",
     },
-    resultValue: {
-        marginTop: 8,
-        fontSize: 18,
+    macroValue: {
+        fontSize: 16,
         fontWeight: "800",
-        color: colors.foreground,
+    },
+    mealCard: {
+        borderRadius: 24,
+        padding: 18,
+        backgroundColor: "#1C1E2A",
+        ...shadow,
+    },
+    mealHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        marginBottom: 14,
+    },
+    mealLabelRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    mealIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 16,
+        backgroundColor: "rgba(0,200,150,0.12)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    mealTitle: {
+        color: "#F8FAFC",
+        fontSize: 16,
+        fontWeight: "800",
+    },
+    mealSummary: {
+        color: "#94A3B8",
+        fontSize: 9,
+        marginTop: 4,
+    },
+    addMealButton: {
+        backgroundColor: "#00C896",
+    },
+    emptyMealText: {
+        color: "#94A3B8",
+        fontSize: 13,
+    },
+    foodList: {
+        gap: 12,
+    },
+    foodItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        padding: 16,
+        borderRadius: 18,
+        backgroundColor: "rgba(255,255,255,0.03)",
+    },
+    foodMain: {
+        flex: 1,
+    },
+    foodName: {
+        color: "#F8FAFC",
+        fontSize: 15,
+        fontWeight: "700",
+    },
+    foodMeta: {
+        marginTop: 4,
+        color: "#94A3B8",
+        fontSize: 12,
+    },
+    deleteButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(248,113,113,0.12)",
     },
 });
