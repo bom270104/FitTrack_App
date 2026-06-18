@@ -58,5 +58,15 @@ export const getDashboardStats = async (userId) => {
             totalAmount: totalAmount(waterLogs),
             chart: toSeries(waterLogs.slice(0, 14), "amount"),
         },
+        profile: userProfile
+            ? {
+                  tdee: userProfile.tdee || 0,
+                  calorieGoal: userProfile.calorie_goal || 0,
+                  targetWeight: userProfile.target_weight || 0,
+                  proteinG: userProfile.protein_goal_g || 0,
+                  carbsG: userProfile.carbs_goal_g || 0,
+                  fatG: userProfile.fat_goal_g || 0,
+              }
+            : null,
     };
 };

@@ -40,17 +40,19 @@ const GOALS = [
 type GoalStepProps = {
     onComplete: (data: { goal: string; deficit_or_surplus: number }) => void;
     onBack: () => void;
+    initialGoal?: string;
+    initialSpeed?: number;
 };
 
-export function GoalStep({ onComplete, onBack }: GoalStepProps) {
-    const [selectedGoal, setSelectedGoal] = useState("maintain");
-    const [selectedSpeed, setSelectedSpeed] = useState(500);
+export function GoalStep({ onComplete, onBack, initialGoal, initialSpeed }: GoalStepProps) {
+    const [selectedGoal, setSelectedGoal] = useState(initialGoal ?? "maintain");
+    const [selectedSpeed, setSelectedSpeed] = useState(initialSpeed ?? 500);
 
     const currentGoal = GOALS.find((g) => g.id === selectedGoal) ?? GOALS[1];
     const hasSpeed = currentGoal.speeds.length > 0;
 
     return (
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.container}>
             <Text style={styles.title}>Mục tiêu của bạn</Text>
             <Text style={styles.subtitle}>Lựa chọn mục tiêu hình thể</Text>
 
@@ -132,7 +134,7 @@ export function GoalStep({ onComplete, onBack }: GoalStepProps) {
                     <MaterialCommunityIcons name="check" size={20} color="#fff" />
                 </Pressable>
             </View>
-        </ScrollView>
+        </View>
     );
 }
 

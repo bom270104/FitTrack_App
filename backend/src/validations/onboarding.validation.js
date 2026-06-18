@@ -23,6 +23,11 @@ export const validateOnboardingInput = (payload) => {
         errors.push("Cân nặng phải từ 30 đến 200 kg");
     }
 
+    // Target weight validation
+    if (payload.target_weight_kg && (payload.target_weight_kg < 30 || payload.target_weight_kg > 200)) {
+        errors.push("Cân nặng mục tiêu phải từ 30 đến 200 kg");
+    }
+
     // Activity level validation
     if (![1.2, 1.375, 1.55, 1.725].includes(payload.activity_level)) {
         errors.push("Tần suất vận động không hợp lệ");

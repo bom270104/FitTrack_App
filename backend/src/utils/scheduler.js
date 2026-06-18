@@ -25,8 +25,10 @@ export function startScheduler() {
                 }
 
                 const lastSentAt = s.lastSent ? new Date(s.lastSent) : null;
-                const intervalHours = Number(s.intervalHours || 3);
-                const shouldSend = !lastSentAt || (now.getTime() - lastSentAt.getTime()) >= intervalHours * 60 * 60 * 1000;
+                const intervalVal = Number(s.intervalHours || 3);
+                const isMinute = s.intervalUnit === "minute";
+                const intervalMs = isMinute ? intervalVal * 60 * 1000 : intervalVal * 60 * 60 * 1000;
+                const shouldSend = !lastSentAt || (now.getTime() - lastSentAt.getTime()) >= intervalMs;
 
                 if (!shouldSend) {
                     continue;
@@ -43,8 +45,8 @@ export function startScheduler() {
                 }
 
                 try {
-                    const subj = `Reminder: time to drink water — FitTrack`;
-                    const body = `Hi ${user.fullName || "user"},\n\n Đây là lời nhắc nhở thân thiện về việc uống nước, hãy duy trì thói quen tốt cho sức khỏe của bạn !\n\n— FitTrack`;
+                    const subj = `Nhắc nhở uống nước - FitTrack`;
+                    const body = `Hi ${user.fullName || "user"},\n\nĐã đến hẹn uống nước rồi bạn nhé.\n\n— FitTrack`;
                     await sendMail({ to: user.email, subject: subj, text: body });
                     await markLastSent(s.userId, new Date());
                     console.log(`[scheduler] Sent reminder email to ${who} at ${now.toISOString()}`);

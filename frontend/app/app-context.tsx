@@ -118,7 +118,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 const DEFAULT_API_BASE_URL = Platform.select({
     android: "https://calibrate-ecosphere-platonic.ngrok-free.dev",
-    ios: "http://localhost:5000",
+    ios: "https://calibrate-ecosphere-platonic.ngrok-free.dev",
     default: "http://localhost:5000",
 });
 const API_BASE_URL = process.env.API_BASE_URL || DEFAULT_API_BASE_URL;

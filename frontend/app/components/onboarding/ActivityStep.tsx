@@ -12,10 +12,11 @@ const ACTIVITY_LEVELS = [
 
 type ActivityStepProps = {
     onNext: (data: { activity_level: number }) => void;
+    initialActivityLevel?: number;
 };
 
-export function ActivityStep({ onNext }: ActivityStepProps) {
-    const [selected, setSelected] = React.useState(1.55);
+export function ActivityStep({ onNext, initialActivityLevel }: ActivityStepProps) {
+    const [selected, setSelected] = React.useState(initialActivityLevel ?? 1.55);
 
     return (
         <View style={styles.container}>

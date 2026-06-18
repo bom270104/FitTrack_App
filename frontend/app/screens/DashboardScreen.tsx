@@ -53,20 +53,21 @@ export function DashboardScreen() {
                         }
                     }
                 }
+                // No water goal found in goals list — clear override so healthData.waterGoal is used
+                if (mounted) setOverrideWaterGoal(null);
             } catch (err) {
                 // noop
             }
         }
 
-        if (!asNumber(healthData.waterGoal) || asNumber(healthData.waterGoal) <= 1) {
-            void loadGoals();
-        }
+        // Always fetch latest goals to pick up any edits the user made
+        void loadGoals();
 
         return () => {
             mounted = false;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [healthData?.waterGoal]);
+    }, [authFetch]);
 
     const hasBmi = asNumber(healthData.bmi) > 0;
     const hasCalories = asNumber(healthData.calorieGoal) > 0 || asNumber(healthData.dailyCalories) > 0 || asNumber(healthData.tdee) > 0;
@@ -102,10 +103,10 @@ export function DashboardScreen() {
                     <Text style={styles.greeting}>Chào buổi sáng</Text>
                     <Text style={styles.name}>{userData?.name ?? ""}</Text>
                 </View>
-                <View style={styles.bellButton}>
+                {/* <View style={styles.bellButton}>
                     <MaterialCommunityIcons name="bell-outline" size={20} color={colors.foreground} />
                     <View style={styles.notificationDot} />
-                </View>
+                </View> */}
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

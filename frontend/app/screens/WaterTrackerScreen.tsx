@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useApp } from "../app-context";
 import { BottomNav } from "../bottom-nav";
@@ -16,6 +16,8 @@ const waterOptions = [
 export function WaterTrackerScreen() {
     const { healthData, addWater, setScreen, authFetch } = useApp();
     const [overrideGoal, setOverrideGoal] = useState<number | null>(null);
+    const [showCustomModal, setShowCustomModal] = useState(false);
+    const [customAmount, setCustomAmount] = useState("");
 
     const effectiveGoal = overrideGoal ?? healthData.waterGoal;
     const hasWaterGoal = effectiveGoal > 0;
@@ -95,21 +97,21 @@ export function WaterTrackerScreen() {
                         }
                     }
                 }
+                // No water goal in goals — clear override so healthData.waterGoal is used
+                if (mounted) setOverrideGoal(null);
             } catch (err) {
                 // noop
             }
         }
 
-        // only load if healthData doesn't already have a custom goal
-        if (!healthData?.waterGoal || healthData.waterGoal <= 1) {
-            void loadGoals();
-        }
+        // Always fetch latest goals to pick up any edits the user made
+        void loadGoals();
 
         return () => {
             mounted = false;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [authFetch, healthData?.waterGoal]);
+    }, [authFetch]);
 
     return (
         <View style={styles.root}>
@@ -161,7 +163,51 @@ export function WaterTrackerScreen() {
                     </View>
                 </View>
 
-                <Button onPress={() => addWater(100)} title="Thêm lượng tùy chỉnh" style={styles.customButton} contentStyle={styles.customContent} />
+                <Pressable onPress={() => { setCustomAmount(""); setShowCustomModal(true); }} style={styles.customButton}>
+                    <MaterialCommunityIcons name="plus-circle-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.customButtonText}>Thêm lượng tùy chỉnh</Text>
+                </Pressable>
+
+                {/* Custom amount modal */}
+                <Modal visible={showCustomModal} transparent animationType="fade" onRequestClose={() => setShowCustomModal(false)}>
+                    <View style={styles.modalBackdrop}>
+                        <View style={styles.modalCard}>
+                            <Text style={styles.modalTitle}>Nhập lượng nước</Text>
+                            <View style={styles.inputRow}>
+                                <TextInput
+                                    style={styles.amountInput}
+                                    value={customAmount}
+                                    onChangeText={setCustomAmount}
+                                    placeholder="VD: 350"
+                                    placeholderTextColor={colors.muted}
+                                    keyboardType="numeric"
+                                    autoFocus
+                                />
+                                <Text style={styles.inputUnit}>ml</Text>
+                            </View>
+                            <View style={styles.modalActions}>
+                                <Pressable onPress={() => setShowCustomModal(false)} style={styles.cancelBtn}>
+                                    <Text style={styles.cancelText}>Hủy</Text>
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => {
+                                        const parsed = Number(customAmount.trim());
+                                        if (!Number.isFinite(parsed) || parsed <= 0) {
+                                            Alert.alert("Lỗi", "Vui lòng nhập số ml hợp lệ (lớn hơn 0).");
+                                            return;
+                                        }
+                                        void addWater(parsed);
+                                        setShowCustomModal(false);
+                                        setCustomAmount("");
+                                    }}
+                                    style={styles.confirmBtn}
+                                >
+                                    <Text style={styles.confirmText}>Thêm</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
 
                 <View style={styles.card}>
                     <Text style={styles.sectionTitle}>Nhật ký hôm nay</Text>
@@ -353,9 +399,17 @@ const styles = StyleSheet.create({
     },
     customButton: {
         backgroundColor: colors.secondary,
-    },
-    customContent: {
+        borderRadius: 18,
+        paddingVertical: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
         gap: 8,
+    },
+    customButtonText: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#FFFFFF",
     },
     logList: {
         gap: 10,
@@ -393,5 +447,74 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 13,
         color: colors.muted,
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: "rgba(15,23,42,0.45)",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+    },
+    modalCard: {
+        width: "100%",
+        borderRadius: 24,
+        backgroundColor: colors.card,
+        padding: 22,
+    },
+    modalTitle: {
+        fontSize: 17,
+        fontWeight: "800",
+        color: colors.foreground,
+        marginBottom: 16,
+    },
+    inputRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        backgroundColor: colors.mutedSoft,
+        borderRadius: 14,
+        paddingHorizontal: 16,
+        paddingVertical: 4,
+        marginBottom: 20,
+    },
+    amountInput: {
+        flex: 1,
+        fontSize: 28,
+        fontWeight: "800",
+        color: colors.foreground,
+        paddingVertical: 12,
+    },
+    inputUnit: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: colors.muted,
+    },
+    modalActions: {
+        flexDirection: "row",
+        gap: 10,
+    },
+    cancelBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 14,
+        backgroundColor: colors.mutedSoft,
+        alignItems: "center",
+    },
+    cancelText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: colors.muted,
+    },
+    confirmBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 14,
+        backgroundColor: colors.secondary,
+        alignItems: "center",
+    },
+    confirmText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#FFFFFF",
     },
 });

@@ -2,11 +2,16 @@ import { connectDB } from "../config/db.js";
 import Food from "../models/Food.js";
 import { foodSeed } from "../data/foodSeed.js";
 
-export const seedFoodCatalog = async () => {
-    const existingCount = await Food.countDocuments();
-    if (existingCount > 0) {
-        console.log(`Food catalog already contains ${existingCount} item(s). Skipping seed.`);
-        return false;
+export const seedFoodCatalog = async (force = false) => {
+    if (force) {
+        await Food.deleteMany({});
+        console.log("Cleared existing food catalog.");
+    } else {
+        const existingCount = await Food.countDocuments();
+        if (existingCount > 0) {
+            console.log(`Food catalog already contains ${existingCount} item(s). Skipping seed.`);
+            return false;
+        }
     }
 
     const inserted = await Food.insertMany(foodSeed);
@@ -17,7 +22,7 @@ export const seedFoodCatalog = async () => {
 const runSeed = async () => {
     try {
         await connectDB();
-        await seedFoodCatalog();
+        await seedFoodCatalog(true);
         process.exit(0);
     } catch (error) {
         console.error("Food seed failed:", error);

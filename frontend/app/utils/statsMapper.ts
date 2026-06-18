@@ -3,6 +3,9 @@ export function mapDashboardToHealthData(dashboard: any, current: any) {
     const dd = dashboard || {};
     const finiteOrCurrent = (value: unknown, currentValue: number) =>
         typeof value === "number" && Number.isFinite(value) ? value : currentValue;
+    // Like finiteOrCurrent but also rejects 0 (used for goals that must be positive)
+    const positiveOrCurrent = (value: unknown, currentValue: number) =>
+        typeof value === "number" && Number.isFinite(value) && value > 0 ? value : currentValue;
 
     // weight history from bmi.recentEntries -> [{date, weight}]
     const weightHistory = Array.isArray(dd?.bmi?.recentEntries)
@@ -25,17 +28,20 @@ export function mapDashboardToHealthData(dashboard: any, current: any) {
         current.bmi ?? 0,
     );
 
-    const tdee = finiteOrCurrent(Number(latestCalories.tdee || 0), current.tdee ?? 0);
+    const tdee = positiveOrCurrent(
+        Number(latestCalories.tdee || dd?.profile?.tdee || dd?.tdee || 0),
+        current.tdee ?? 0
+    );
 
-    const calorieGoal = finiteOrCurrent(
-        Number(latestCalories.recommendedCalories ?? current.calorieGoal ?? 0),
-        current.calorieGoal ?? 0,
+    const calorieGoal = positiveOrCurrent(
+        Number(latestCalories.recommendedCalories ?? dd?.profile?.calorieGoal ?? dd?.profile?.calorie_goal ?? dd?.calorieGoal ?? 0),
+        current.calorieGoal ?? 0
     );
 
     const currentWeight = finiteOrCurrent(Number(latestBmiEntry.weight || latestBmiEntry.bmi || 0), current.currentWeight ?? 0);
     const targetWeight = finiteOrCurrent(Number((dd?.profile?.targetWeight ?? dd?.profile?.target_weight) || 0), current.targetWeight ?? 0);
     const waterTotal = finiteOrCurrent(Number(dd?.water?.totalAmount || 0), current.waterIntake ?? 0);
-    const waterGoal = finiteOrCurrent(Number(dd?.water?.goal || 0), current.waterGoal ?? 2000);
+    const waterGoal = positiveOrCurrent(Number(dd?.water?.goal), current.waterGoal ?? 2000);
 
     return {
         bmi,

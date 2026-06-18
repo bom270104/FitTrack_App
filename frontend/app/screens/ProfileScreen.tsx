@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { colors, shadow } from "../theme";
 
 const menuItems = [
+    { icon: "calculator-variant-outline", label: "Tính lại TDEE & Mục tiêu", action: "re-onboard" },
     { icon: "bell-outline", label: "Thông báo", action: "notifications" },
     { icon: "moon-waning-crescent", label: "Giao diện tối", action: "darkmode", toggle: true },
     { icon: "shield-outline", label: "Quyền riêng tư", action: "privacy" },
@@ -18,11 +19,13 @@ const menuItems = [
 ] as const;
 
 export function ProfileScreen() {
-    const { userData, setScreen, updateProfile, logout } = useApp();
+    const { userData, healthData, setScreen, updateProfile, logout, authFetch } = useApp();
     const [showNotifications, setShowNotifications] = useState(false);
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [activeInfo, setActiveInfo] = useState<{ title: string; body: string } | null>(null);
     const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+    const [activeGoalCount, setActiveGoalCount] = useState(0);
+    const [weeklyProgress, setWeeklyProgress] = useState(0);
     const currentYear = new Date().getFullYear();
     const initialBirthYear = (userData as any)?.date_of_birth
         ? String(new Date((userData as any).date_of_birth).getFullYear())
@@ -38,6 +41,37 @@ export function ProfileScreen() {
         dailyWaterGoal: String(userData?.dailyWaterGoal ?? 2000),
     });
     const [profileError, setProfileError] = useState<string | null>(null);
+
+    // Fetch goals to compute live count & progress (mirrors GoalsScreen logic)
+    useEffect(() => {
+        async function fetchGoalsSummary() {
+            try {
+                const res = await authFetch("/api/goals");
+                if (!res || !res.ok) return;
+                const body = (await res.json()) as any;
+                const serverGoals: any[] = Array.isArray(body.data?.goals) ? body.data.goals : [];
+                if (serverGoals.length === 0) return;
+
+                setActiveGoalCount(serverGoals.length);
+
+                // Compute average progress across goals
+                const totalProgress = serverGoals.reduce((sum: number, g: any) => {
+                    const maxVal = Number(g.max) > 0 ? Number(g.max) : (Number(String(g.target ?? "").replace(/[^0-9.]/g, "")) || 1);
+                    let currentVal = Number(g.current);
+                    // Use live healthData for known unit types
+                    const unit = g.unit ?? "";
+                    if (unit === "ml" && (!currentVal || currentVal <= 0)) currentVal = healthData.waterIntake;
+                    if (unit === "kg" && (!currentVal || currentVal <= 0)) currentVal = healthData.currentWeight;
+                    const pct = maxVal > 0 ? Math.min(Math.max((currentVal / maxVal) * 100, 0), 100) : 0;
+                    return sum + pct;
+                }, 0);
+                setWeeklyProgress(Math.round(totalProgress / serverGoals.length));
+            } catch {
+                // noop
+            }
+        }
+        void fetchGoalsSummary();
+    }, [authFetch, healthData.waterIntake, healthData.currentWeight]);
 
     const parseOptionalNumber = (value: string) => {
         const trimmed = value.trim();
@@ -131,14 +165,12 @@ export function ProfileScreen() {
                     <View style={styles.goalHeader}>
                         <View>
                             <Text style={styles.goalTitle}>Mục tiêu của tôi</Text>
-                            <Text style={styles.goalSubtitle}>3 mục tiêu đang hoạt động</Text>
+                            <Text style={styles.goalSubtitle}>
+                                {activeGoalCount > 0 ? `${activeGoalCount} mục tiêu đang hoạt động` : "Chưa có mục tiêu"}
+                            </Text>
                         </View>
-                        <View style={styles.goalRight}>
-                            <Text style={styles.goalPercent}>78%</Text>
-                            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
-                        </View>
+                        <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
                     </View>
-                    <View style={styles.goalProgressTrack}><View style={styles.goalProgressFill} /></View>
                 </Pressable>
 
                 <View style={styles.menuCard}>
@@ -146,6 +178,10 @@ export function ProfileScreen() {
                         <Pressable
                             key={item.action}
                             onPress={() => {
+                                if (item.action === "re-onboard") {
+                                    setScreen("onboarding");
+                                    return;
+                                }
                                 if (item.action === "notifications") {
                                     setShowNotifications(true);
                                     return;
@@ -214,10 +250,7 @@ export function ProfileScreen() {
                                 <Input value={profileForm.birthYear} onChangeText={(text) => setProfileForm((current) => ({ ...current, birthYear: text }))} placeholder="Năm sinh" keyboardType="numeric" style={styles.flexInput} />
                                 <Input value={profileForm.height} onChangeText={(text) => setProfileForm((current) => ({ ...current, height: text }))} placeholder="Chiều cao (cm)" keyboardType="numeric" style={styles.flexInput} />
                             </View>
-                            <View style={styles.twoCol}>
-                                <Input value={profileForm.weight} onChangeText={(text) => setProfileForm((current) => ({ ...current, weight: text }))} placeholder="Cân nặng (kg)" keyboardType="numeric" style={styles.flexInput} />
-                                <Input value={profileForm.dailyWaterGoal} onChangeText={(text) => setProfileForm((current) => ({ ...current, dailyWaterGoal: text }))} placeholder="Mục tiêu nước (ml)" keyboardType="numeric" style={styles.flexInput} />
-                            </View>
+                            <Input value={profileForm.weight} onChangeText={(text) => setProfileForm((current) => ({ ...current, weight: text }))} placeholder="Cân nặng (kg)" keyboardType="numeric" />
                             {profileError ? <Text style={styles.errorText}>{profileError}</Text> : null}
                             <View style={styles.editActions}>
                                 <Button variant="outline" onPress={() => setShowEditProfile(false)} title="Hủy" style={styles.actionButton} />

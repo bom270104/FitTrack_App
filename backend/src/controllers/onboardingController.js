@@ -7,7 +7,7 @@ import User from "../models/User.js";
 import CaloriesLog from "../models/CaloriesLog.js";
 
 export const completeOnboarding = asyncHandler(async (req, res) => {
-    const { gender, age, height_cm, weight_kg, activity_level, goal, deficit_or_surplus } = req.body;
+    const { gender, age, height_cm, weight_kg, target_weight_kg, activity_level, goal, deficit_or_surplus } = req.body;
 
     // Validate inputs
     validateOnboardingInput({
@@ -15,6 +15,7 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
         age,
         height_cm,
         weight_kg,
+        target_weight_kg,
         activity_level,
         goal,
         deficit_or_surplus: deficit_or_surplus || 0,
@@ -26,6 +27,7 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
         age,
         height_cm,
         weight_kg,
+        target_weight_kg,
         activity_level,
         goal,
         deficit_or_surplus: deficit_or_surplus || 0,
