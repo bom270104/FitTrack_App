@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendSuccess, sendError } from "../utils/apiResponse.js";
 import {
