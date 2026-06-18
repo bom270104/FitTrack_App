@@ -57,6 +57,7 @@ export const calculateTDEE = ({
   gender,
   activityLevel,
   goal,
+  deficitOrSurplus = 0,
 }) => {
   const normalizedActivityLevel = String(activityLevel || "")
     .trim()
@@ -72,17 +73,25 @@ export const calculateTDEE = ({
 
   const bmr = getBmr({ weight, height, age, gender });
   const tdee = bmr * activityMultiplier;
-  const goalAdjustment = GOAL_CALORIE_ADJUSTMENTS[normalizedGoal];
 
-  if (goalAdjustment === undefined) {
+  let goalCalories = tdee;
+  if (normalizedGoal === "loss") {
+    goalCalories = tdee - deficitOrSurplus;
+    const minGoal = Math.max(Math.round(bmr * 0.8), 1200);
+    goalCalories = Math.max(goalCalories, minGoal);
+  } else if (normalizedGoal === "gain") {
+    goalCalories = tdee + deficitOrSurplus;
+  } else if (normalizedGoal === "maintain") {
+    goalCalories = tdee;
+  } else {
     throw new AppError("Invalid goal value", 400);
   }
 
   return {
     bmr: Math.round(bmr),
     tdee: Math.round(tdee),
-    goalCalories: Math.round(tdee + goalAdjustment),
+    goalCalories: Math.round(goalCalories),
     activityMultiplier,
-    goalAdjustment,
+    deficitOrSurplus,
   };
 };

@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "test:e2e:auth": "playwright test -c e2e/playwright.config.ts auth.spec.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}

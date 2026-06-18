@@ -5,6 +5,10 @@ export const notFound = (req, res, next) => {
 };
 
 export const errorHandler = (error, req, res, next) => {
+  // log error for debugging
+  // eslint-disable-next-line no-console
+  console.error(error);
+
   const statusCode = error.statusCode || 500;
   const message = error.message || "Internal server error";
 
@@ -41,8 +45,8 @@ export const errorHandler = (error, req, res, next) => {
     ...(error.isOperational
       ? {}
       : {
-          stack:
-            process.env.NODE_ENV === "development" ? error.stack : undefined,
-        }),
+        stack:
+          process.env.NODE_ENV === "development" ? error.stack : undefined,
+      }),
   });
 };

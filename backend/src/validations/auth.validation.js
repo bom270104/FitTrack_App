@@ -19,23 +19,13 @@ const activityLevels = [
 const goals = ["gain", "lose", "maintain"];
 
 export const validateRegisterInput = (payload = {}) => {
-  requireFields(payload, [
-    "fullName",
-    "email",
-    "password",
-    "age",
-    "gender",
-    "height",
-    "weight",
-    "activityLevel",
-    "goal",
-  ]);
+  requireFields(payload, ["fullName", "email", "password"]);
 
   const email = normalizeLowerText(payload.email);
   const password = String(payload.password);
-  const gender = normalizeLowerText(payload.gender);
-  const activityLevel = normalizeLowerText(payload.activityLevel);
-  const goal = normalizeLowerText(payload.goal);
+  const gender = payload.gender ? normalizeLowerText(payload.gender) : undefined;
+  const activityLevel = payload.activityLevel ? normalizeLowerText(payload.activityLevel) : undefined;
+  const goal = payload.goal ? normalizeLowerText(payload.goal) : undefined;
 
   if (!isEmail(email)) {
     throw new AppError("Please provide a valid email address", 400);
@@ -45,15 +35,15 @@ export const validateRegisterInput = (payload = {}) => {
     throw new AppError("Password must be at least 8 characters long", 400);
   }
 
-  if (!GENDER_OPTIONS.includes(gender)) {
+  if (gender !== undefined && !GENDER_OPTIONS.includes(gender)) {
     throw new AppError("Invalid gender value", 400);
   }
 
-  if (!activityLevels.includes(activityLevel)) {
+  if (activityLevel !== undefined && !activityLevels.includes(activityLevel)) {
     throw new AppError("Invalid activity level", 400);
   }
 
-  if (!goals.includes(goal)) {
+  if (goal !== undefined && !goals.includes(goal)) {
     throw new AppError("Invalid goal value", 400);
   }
 
@@ -61,16 +51,16 @@ export const validateRegisterInput = (payload = {}) => {
     fullName: normalizeText(payload.fullName),
     email,
     password,
-    age: parsePositiveNumber(payload.age, "age"),
+    age: payload.age === undefined || payload.age === null || payload.age === "" ? undefined : parsePositiveNumber(payload.age, "age"),
     gender,
-    height: parsePositiveNumber(payload.height, "height"),
-    weight: parsePositiveNumber(payload.weight, "weight"),
+    height: payload.height === undefined || payload.height === null || payload.height === "" ? undefined : parsePositiveNumber(payload.height, "height"),
+    weight: payload.weight === undefined || payload.weight === null || payload.weight === "" ? undefined : parsePositiveNumber(payload.weight, "weight"),
     activityLevel,
     goal,
     dailyWaterGoal:
       payload.dailyWaterGoal === undefined ||
-      payload.dailyWaterGoal === null ||
-      payload.dailyWaterGoal === ""
+        payload.dailyWaterGoal === null ||
+        payload.dailyWaterGoal === ""
         ? undefined
         : parsePositiveNumber(payload.dailyWaterGoal, "dailyWaterGoal"),
   };

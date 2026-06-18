@@ -6,6 +6,14 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import waterRoutes from "./routes/water.routes.js";
 import healthRoutes from "./routes/health.routes.js";
+import bmiRoutes from "./routes/bmi.routes.js";
+import caloriesRoutes from "./routes/calories.routes.js";
+import statsRoutes from "./routes/stats.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
+import foodRoutes from "./routes/food.routes.js";
+import mealRoutes from "./routes/meal.routes.js";
+import onboardingRoutes from "./routes/onboarding.routes.js";
+import goalsRoutes from "./routes/goals.routes.js";
 import { notFound, errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
@@ -36,8 +44,16 @@ app.get("/api/status", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/bmi", bmiRoutes);
+app.use("/api/calories", caloriesRoutes);
+app.use("/api/stats", statsRoutes);
 app.use("/api/water", waterRoutes);
 app.use("/api/health", healthRoutes);
+app.use("/api/notification", notificationRoutes);
+app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/goals", goalsRoutes);
+app.use("/api/foods", foodRoutes);
+app.use("/api/meals", mealRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

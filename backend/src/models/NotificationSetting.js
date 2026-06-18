@@ -19,6 +19,11 @@ const notificationSettingSchema = new Schema({
     default: 3,
     min: 1,
   },
+  intervalUnit: {
+    type: String,
+    enum: ["hour", "minute"],
+    default: "hour",
+  },
   startTime: {
     type: String,
     default: "08:00",
@@ -30,6 +35,10 @@ const notificationSettingSchema = new Schema({
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+  lastSent: {
+    type: Date,
+    default: null,
   },
 });
 

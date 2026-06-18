@@ -1,12 +1,7 @@
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
-import {
-  ACTIVITY_LEVELS,
-  DEFAULT_DAILY_WATER_GOAL,
-  GENDER_OPTIONS,
-  GOAL_CALORIE_ADJUSTMENTS,
-} from "../constants/index.js";
+import { DEFAULT_DAILY_WATER_GOAL, GENDER_OPTIONS } from "../constants/index.js";
 
 const { Schema } = mongoose;
 
@@ -19,6 +14,7 @@ const userSchema = new Schema(
       required: [true, "Full name is required"],
       trim: true,
     },
+
     email: {
       type: String,
       required: [true, "Email is required"],
@@ -27,46 +23,59 @@ const userSchema = new Schema(
       trim: true,
       match: [emailRegex, "Please provide a valid email address"],
     },
+
     password: {
       type: String,
       required: [true, "Password is required"],
       minlength: [8, "Password must be at least 8 characters long"],
       select: false,
     },
+
     age: {
       type: Number,
-      required: [true, "Age is required"],
-      min: [1, "Age must be greater than zero"],
+      min: [1, "Age must be greater than 0"],
     },
+
     gender: {
       type: String,
-      required: [true, "Gender is required"],
       enum: GENDER_OPTIONS,
+      lowercase: true,
+      trim: true,
     },
+
     height: {
       type: Number,
-      required: [true, "Height is required"],
-      min: [1, "Height must be greater than zero"],
+      min: [1, "Height must be greater than 0"],
     },
+
     weight: {
       type: Number,
-      required: [true, "Weight is required"],
-      min: [1, "Weight must be greater than zero"],
+      min: [1, "Weight must be greater than 0"],
     },
+
     activityLevel: {
       type: String,
-      required: [true, "Activity level is required"],
-      enum: Object.keys(ACTIVITY_LEVELS),
+      enum: ["sedentary", "light", "moderate", "active", "very_active"],
+      lowercase: true,
+      trim: true,
     },
+
     goal: {
       type: String,
-      required: [true, "Goal is required"],
-      enum: Object.keys(GOAL_CALORIE_ADJUSTMENTS),
+      enum: ["gain", "lose", "maintain"],
+      lowercase: true,
+      trim: true,
     },
+
+    profileComplete: {
+      type: Boolean,
+      default: false,
+    },
+
     dailyWaterGoal: {
       type: Number,
+      min: [1, "Daily water goal must be greater than 0"],
       default: DEFAULT_DAILY_WATER_GOAL,
-      min: [0, "Daily water goal must be zero or greater"],
     },
   },
   {
@@ -74,22 +83,15 @@ const userSchema = new Schema(
   },
 );
 
-userSchema.pre("save", async function hashPassword(next) {
+userSchema.pre("save", async function () {
   if (!this.isModified("password")) {
-    return next();
+    return;
   }
 
-  try {
-    this.password = await bcrypt.hash(this.password, 12);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  this.password = await bcrypt.hash(this.password, 12);
 });
 
-userSchema.methods.comparePassword = function comparePassword(
-  candidatePassword,
-) {
+userSchema.methods.comparePassword = function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 

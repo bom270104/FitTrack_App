@@ -4,5 +4,24 @@
  * @returns {T}
  */
 export const asyncHandler = (handler) => (req, res, next) => {
-  Promise.resolve(handler(req, res, next)).catch(next);
+  try {
+    const result = handler(req, res, next);
+
+    if (result && typeof result.then === "function") {
+      return result.catch((err) => {
+        try {
+          return next(err);
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error("asyncHandler next call failed:", e);
+          throw e;
+        }
+      });
+    }
+
+    return result;
+  } catch (err) {
+    // synchronous error
+    return next(err);
+  }
 };
